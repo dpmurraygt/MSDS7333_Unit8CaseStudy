@@ -13,6 +13,9 @@ library(rvest)
 #this is code from Nolan and Lang
 
 #setwd("~/EMD/CaseStudies/Runners/WebPages")
+url <- "http://www.cherryblossom.org"
+
+
 
 m2012 = read.table(file="MenTxt/2012.txt", skip = 8)
 
@@ -768,108 +771,87 @@ predV = predict(loCoeffs, new = data.frame(ages = ageV))
 lines(x = ageV, y = predV, lwd = 3, lty = 2, col = "#4daf4a")
 par(oldPar)
 dev.off()
+```
+
+```{r web_scraping, include=FALSE, echo=FALSE}
+# Section 2.7 Parsing
 
 library(XML)
-ubase = "http://www.cherryblossom.org/"
-url = paste(ubase, "results/2012/2012cucb10m-m.htm", sep = "")
-doc = htmlParse(url)
+#ubase = "http://www.cherryblossom.org/"
+#url = paste(ubase, "results/2012/2012cucb10m-m.htm", sep = "")
+#doc = htmlParse(url)
 
-preNode = getNodeSet(doc, "//pre")
- 
-txt = xmlValue(preNode[[1]])
+# use xpath to get all pre nodes, get nodeset returns a list of all <pre> nodes in a list
+#preNode = getNodeSet(doc, "//pre")
 
-nchar(txt)
+# get text value from the node
+#txt = xmlValue(preNode[[1]])
 
-substr(txt, 1, 50)
+#nchar(txt)
 
-substr(txt, nchar(txt) - 50, nchar(txt))
+# start and end of text
+#substr(txt, 1, 50)
 
-els = strsplit(txt, "\\r\\n")[[1]]
+#substr(txt, nchar(txt) - 50, nchar(txt))
 
-length(els)
+# split lines by carriage/new line
+#els = strsplit(txt, "\\r\\n")[[1]]
 
-els[1:3]
+# length of text
+#length(els)
 
-els[ length(els) ]
+# first few lines are all header
+#els[1:3]
 
-extractResTable =
+#els[ length(els) ]
+
+# formalize FUN to extract tables from pages for '99 to '12
+# 28 pages in total (14 men + 14 women)
+#extractResTable =
        # Retrieve data from web site, find preformatted text,
        # return as a character vector.
-function(url)
-{
-  doc = htmlParse(url)
-  preNode = getNodeSet(doc, "//pre")
-  txt = xmlValue(preNode[[1]])
-  els = strsplit(txt, "\r\n")[[1]]   
+#function(url)
+#{
+#  doc = htmlParse(url)
+#  preNode = getNodeSet(doc, "//pre")
+#  txt = xmlValue(preNode[[1]])
+#  
+#  els = strsplit(txt, "\r\n")[[1]]
+#  if(length(els) == 1){
+#    els = strsplit(txt, "\n")[[1]]
+#  }
   
-  return(els)
-}
+#  return(els)
+#}
 
-m2012 = extractResTable(url)
+#m2012 = extractResTable(url)
 
-identical(m2012, els)
+#identical(m2012, els)
 
-ubase = "http://www.cherryblossom.org/"
-urls = paste(ubase, "results/", 1999:2012, "/",
-             1999:2012, "cucb10m-m.htm", sep = "")
 
-menTables = lapply(urls, extractResTable)
+# clean up var names, authors are terrible and causes confusion
 
-options(error = recover)
-menTables = lapply(urls, extractResTable)
+#url_base = "http://www.cherryblossom.org/"
 
-Browse[1]> ls()
+# get a list of urls from which to extract the data for men's results
+#urls = paste(ubase, "results/", 1999:2012, "/",
+#             1999:2012, "cucb10m-m.htm", sep = "")
 
-Browse[1]> url
+# apply FUN to vector of URLs
+#menTables = lapply(urls, extractResTable)
 
-Browse[1]> length(preNode)
+#options(error = recover)
+#menTables = lapply(urls, extractResTable)
 
-menURLs = 
-  c("cb99m.htm", "cb003m.htm", "results/2001/oof_m.html",
-    "results/2002/oofm.htm", "results/2003/CB03-M.HTM",
-    "results/2004/men.htm", "results/2005/CB05-M.htm", 
-    "results/2006/men.htm", "results/2007/men.htm", 
-    "results/2008/men.htm", "results/2009/09cucb-M.htm",
-    "results/2010/2010cucb10m-m.htm", 
-    "results/2011/2011cucb10m-m.htm",
-    "results/2012/2012cucb10m-m.htm")
+# these are for browing the recover() debugging mode
+#Browse[1]> ls()
 
-urls = paste(ubase, menURLs, sep = "")
+#Browse[1]> url
 
-urls[1:3]
+#Browse[1]> length(preNode)
 
-menTables = lapply(urls, extractResTable)
-names(menTables) = 1999:2012
+# find that URLs are different depending on the year, great work web devs.
 
-sapply(menTables, length)
-
-extractResTable =
-  # Retrieve data from web site, 
-  # find the preformatted text,
-  # and return as a character vector.
-function(url, year = 1999)
-{
-  doc = htmlParse(url)
-
-  if (year == 2000) {
-    # Get text from 4th font element
-    # File is ill-formed so <pre> search doesn't work.
-    ff = getNodeSet(doc, "//font")
-    txt = xmlValue(ff[[4]])
-  }
-  else {
-    preNode = getNodeSet(doc, "//pre")
-    txt = xmlValue(preNode[[1]])
-  } 
-  
-  els = strsplit(txt, "\r\n")[[1]]
-  return(els)
-}
-
-years = 1999:2012
-menTables = mapply(extractResTable, url = urls, year = years)
-names(menTables) = years
-sapply(menTables, length)
 
 extractResTable =
   #
@@ -889,6 +871,14 @@ extractResTable =
       txt = xmlValue(ff[[4]])
       els = strsplit(txt, "\r\n")[[1]]
     }
+    
+    else if (year == 2000 & sex == "female"){
+      pres = getNodeSet(doc, "//p") # for bad HTML
+      txt = xmlValue(pres[[1]])
+      els = strsplit(txt, "\r\n")[[1]]
+      
+    }
+    
     else if (year == 2009 & sex == "male") {
       # Get preformatted text from <div class="Section1"> element
       # Each line of results is in a <pre> element
@@ -896,31 +886,77 @@ extractResTable =
       pres = getNodeSet(div1[[1]], "//pre")
       els = sapply(pres, xmlValue)
     }
+    
     else {
       # Get preformatted text from <pre> elements
       pres = getNodeSet(doc, "//pre")
       txt = xmlValue(pres[[1]])
-      els = strsplit(txt, "\r\n")[[1]]   
+      els = strsplit(txt, "\r\n")[[1]]
+      if(length(els) == 1){
+                           els = strsplit(txt, "\n")[[1]]
+      }
     } 
     
     if (is.null(file)) return(els)
     # Write the lines as a text file.
     writeLines(els, con = file)
   }
+```
 
+``` {r data_gather, include=FALSE, echo=FALSE}
+# EDITS & UPDATES
+
+ubase <- paste("http://www.cherryblossom.org/results/", 1999:2012,"/", sep="")
+
+menURLs = 
+  c("cb99m.html", "cb003m.htm", "oof_m.html", "oofm.htm", 
+    "CB03-M.HTM", "men.htm", "CB05-M.htm", "men.htm", "men.htm", 
+    "men.htm", "09cucb-M.htm", "2010cucb10m-m.htm", 
+    "2011cucb10m-m.htm",
+    "2012cucb10m-m.htm")
+
+# paste together base url and mens urls
+urls = paste(ubase, menURLs, sep = "")
+
+options(error = recover)
 
 years = 1999:2012
-menTables = mapply(extractResTable, url = urls, year = years)
+options(error = recover)
+files = paste("Data/mens", years, '.txt', sep="")
+
+setwd("~/Datascience/SMU_Data_Science/MSDS_QTW/Unit8_CaseStudy/Unit8/")
+menTables = mapply(extractResTable, 
+                   url = urls, 
+                   year = years, 
+                   file=files)
+
+# check mens table counts
 names(menTables) = years
 sapply(menTables, length)
 
-#womenTables = mapply(extractResTable, url = urls, 
-#                       year = years, sex = rep("female", 14))
-#names(womenTables) = years
-#sapply(womenTables, length)
-
-
 save(menTables, file = "CBMenTextTables.rda")
+
+
+womenURLs = 
+  c("cb99f.html", "cb003f.htm", "oof_f.html", "ooff.htm", 
+    "CB03-F.HTM", "women.htm", "CB05-F.htm", "women.htm", "women.htm", 
+    "women.htm", "09cucb-F.htm", "2010cucb10m-f.htm", 
+    "2011cucb10m-f.htm",
+    "2012cucb10m-f.htm")
+
+urls = paste(ubase, womenURLs, sep = "")
+files = paste("Data/womens", years, '.txt', sep="")
+
+options(error = recover)
+womenTables = mapply(extractResTable, url = urls, 
+                    year = years, sex = rep("female", 14),
+                    file=files)
+
+names(womenTables) = years
+sapply(womenTables, length)
+
+
+
 
 ```
 
