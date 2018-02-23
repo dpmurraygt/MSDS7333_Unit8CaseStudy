@@ -1,7 +1,7 @@
 ---
 title: 'Modeling Runners Times (update this title)'
 author: "Dennis Murray, Jared Law, Julien Battaillard, Cory Nichols"
-section: "MSDS 7333-403 - Quantifying the World - Case Study 3 (Unit 8)"
+section: "MSDS 7333-403 - Quantifying the World - Case Study 4 (Unit 8)"
 date: "March 6th, 2018"
 output: 
   word_document:
@@ -17,13 +17,14 @@ library(rvest)
 ```
 
 ```{r setup, echo=FALSE, include=FALSE}
-dir <- '~/DataScience/SMU/QTW/Unit8/Unit8_CaseStudy/'
+dir <- "~/DataScience/SMU/QTW/Unit8/Unit8_CaseStudy/"
+setwd(dir)
 knitr::opts_knit$set(root.dir = dir)
 knitr::opts_chunk$set(echo = FALSE)
 ```
 
 ```{r make, include=FALSE, cache=TRUE}
-# source(makefilehere.R)
+source("src/make.R")
 ```
 
 ## Abstract
