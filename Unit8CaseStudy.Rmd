@@ -925,10 +925,16 @@ options(error = recover)
 files = paste("Data/mens", years, '.txt', sep="")
 
 setwd("~/Datascience/SMU_Data_Science/MSDS_QTW/Unit8_CaseStudy/Unit8/")
+
+# export tables
 menTables = mapply(extractResTable, 
                    url = urls, 
                    year = years, 
                    file=files)
+
+menTables = mapply(extractResTable, 
+                   url = urls, 
+                   year = years)
 
 # check mens table counts
 names(menTables) = years
@@ -948,6 +954,8 @@ urls = paste(ubase, womenURLs, sep = "")
 files = paste("Data/womens", years, '.txt', sep="")
 
 options(error = recover)
+
+# push women results files
 womenTables = mapply(extractResTable, url = urls, 
                     year = years, sex = rep("female", 14),
                     file=files)
