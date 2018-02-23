@@ -1,63 +1,306 @@
 ---
-title: "Case Study Unit 8"
-output: html_notebook
+title: 'Modeling Runners Times (update this title)'
+author: "Dennis Murray, Jared Law, Julien Battaillard, Cory Nichols"
+section: "MSDS 7333-403 - Quantifying the World - Case Study 3 (Unit 8)"
+date: "March 6th, 2018"
+output: 
+  word_document:
+    #reference_docx: word-styles-reference-01.docx
+    fig_caption: yes
 ---
 
-```{r}
+```{r load_libs, echo=FALSE, include=FALSE}
 library(dplyr)
 library(tidyr)
 library(ggplot2)
 library(rvest)
 ```
-```{r}
-#this is code from Nolan and Lang
 
-#setwd("~/EMD/CaseStudies/Runners/WebPages")
+```{r setup, echo=FALSE, include=FALSE}
+dir <- '~/DataScience/SMU/QTW/Unit8/Unit8_CaseStudy/'
+knitr::opts_knit$set(root.dir = dir)
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r make, include=FALSE, cache=TRUE}
+# source(makefilehere.R)
+```
+
+## Abstract
+
+## Introduction
+
+## Literature Review
+
+## Methods
+
+## Results
+
+## Future Work and Conclusions
+
+## References
+
+```{r web_scraping, include=FALSE, echo=FALSE}
+# Section 2.7 Parsing
+
+library(XML)
+#ubase = "http://www.cherryblossom.org/"
+#url = paste(ubase, "results/2012/2012cucb10m-m.htm", sep = "")
+#doc = htmlParse(url)
+
+# use xpath to get all pre nodes, get nodeset returns a list of all <pre> nodes in a list
+#preNode = getNodeSet(doc, "//pre")
+
+# get text value from the node
+#txt = xmlValue(preNode[[1]])
+
+#nchar(txt)
+
+# start and end of text
+#substr(txt, 1, 50)
+
+#substr(txt, nchar(txt) - 50, nchar(txt))
+
+# split lines by carriage/new line
+#els = strsplit(txt, "\\r\\n")[[1]]
+
+# length of text
+#length(els)
+
+# first few lines are all header
+#els[1:3]
+
+#els[ length(els) ]
+
+# formalize FUN to extract tables from pages for '99 to '12
+# 28 pages in total (14 men + 14 women)
+#extractResTable =
+       # Retrieve data from web site, find preformatted text,
+       # return as a character vector.
+#function(url)
+#{
+#  doc = htmlParse(url)
+#  preNode = getNodeSet(doc, "//pre")
+#  txt = xmlValue(preNode[[1]])
+#  
+#  els = strsplit(txt, "\r\n")[[1]]
+#  if(length(els) == 1){
+#    els = strsplit(txt, "\n")[[1]]
+#  }
+  
+#  return(els)
+#}
+
+#m2012 = extractResTable(url)
+
+#identical(m2012, els)
+
+
+# clean up var names, authors are terrible and causes confusion
+
+#url_base = "http://www.cherryblossom.org/"
+
+# get a list of urls from which to extract the data for men's results
+#urls = paste(ubase, "results/", 1999:2012, "/",
+#             1999:2012, "cucb10m-m.htm", sep = "")
+
+# apply FUN to vector of URLs
+#menTables = lapply(urls, extractResTable)
+
+#options(error = recover)
+#menTables = lapply(urls, extractResTable)
+
+# these are for browing the recover() debugging mode
+#Browse[1]> ls()
+
+#Browse[1]> url
+
+#Browse[1]> length(preNode)
+
+# find that URLs are different depending on the year, great work web devs.
+
+
+extractResTable =
+  #
+  # Retrieve data from web site, 
+  # find the preformatted text,
+  # and write lines or return as a character vector.
+  #
+  function(url = "http://www.cherryblossom.org/results/2009/09cucb-F.htm",
+           year = 1999, sex = "male", file = NULL)
+  {
+    doc = htmlParse(url)
+
+    if (year == 2000) {
+      # Get preformatted text from 4th font element
+      # The top file is ill formed so the <pre> search doesn't work.
+      ff = getNodeSet(doc, "//font")
+      txt = xmlValue(ff[[4]])
+      els = strsplit(txt, "\r\n")[[1]]
+    }
+    
+    else if (year == 2000 & sex == "female"){
+      pres = getNodeSet(doc, "//p") # for bad HTML
+      txt = xmlValue(pres[[1]])
+      els = strsplit(txt, "\r\n")[[1]]
+      
+    }
+    
+    else if (year == 2009 & sex == "male") {
+      # Get preformatted text from <div class="Section1"> element
+      # Each line of results is in a <pre> element
+      div1 = getNodeSet(doc, "//div[@class='Section1']")
+      pres = getNodeSet(div1[[1]], "//pre")
+      els = sapply(pres, xmlValue)
+    }
+    
+    else {
+      # Get preformatted text from <pre> elements
+      pres = getNodeSet(doc, "//pre")
+      txt = xmlValue(pres[[1]])
+      els = strsplit(txt, "\r\n")[[1]]
+      if(length(els) == 1){
+                           els = strsplit(txt, "\n")[[1]]
+      }
+    } 
+    
+    if (is.null(file)) return(els)
+    # Write the lines as a text file.
+    writeLines(els, con = file)
+  }
+```
+
+``` {r export_data, include=FALSE, echo=FALSE}
+# EDITS & UPDATES
+
+ubase <- paste("http://www.cherryblossom.org/results/", 1999:2012,"/", sep="")
+
+menURLs = 
+  c("cb99m.html", "cb003m.htm", "oof_m.html", "oofm.htm", 
+    "CB03-M.HTM", "men.htm", "CB05-M.htm", "men.htm", "men.htm", 
+    "men.htm", "09cucb-M.htm", "2010cucb10m-m.htm", 
+    "2011cucb10m-m.htm",
+    "2012cucb10m-m.htm")
+
+# paste together base url and mens urls
+urls = paste(ubase, menURLs, sep = "")
+
+options(error = recover)
+
+years = 1999:2012
+options(error = recover)
+files = paste("Data/mens", years, '.txt', sep="")
+
+# export tables
+menTables = mapply(extractResTable, 
+                   url = urls, 
+                   year = years, 
+                   file = files)
+
+# check mens table counts
+names(menTables) = years
+sapply(menTables, length)
+
+# save(menTables, file = "CBMenTextTables.rda")
+
+# EXPORT WOMENS' DATA
+womenURLs = 
+  c("cb99f.html", "cb003f.htm", "oof_f.html", "ooff.htm", 
+    "CB03-F.HTM", "women.htm", "CB05-F.htm", "women.htm", "women.htm", 
+    "women.htm", "09cucb-F.htm", "2010cucb10m-f.htm", 
+    "2011cucb10m-f.htm",
+    "2012cucb10m-f.htm")
+
+urls = paste(ubase, womenURLs, sep = "")
+files = paste("Data/womens", years, '.txt', sep="")
+
+options(error = recover)
+
+# push women results files
+womenTables = mapply(extractResTable, 
+                    url = urls, 
+                    year = years, 
+                    sex = "female", # need this or vector will be null when considering conditional
+                    file=files)
+
+names(womenTables) = years
+sapply(womenTables, length)
+
+
+```
+
+```{r data_munging, include=FALSE}
+# Nolan and Temple Lang Ch. 2
+
+
 url <- "http://www.cherryblossom.org"
 
-
-
+# errors out
 m2012 = read.table(file="MenTxt/2012.txt", skip = 8)
 
-els = readLines("MenTxt/2012.txt")
 
+els_2011 = readLines("Data/mens2011.txt")
+els_2011[1:10]
+
+# try readlines, as we need custom induction logic
+# time in 2012 == Net Time
+els_2012 = readLines("Data/mens2012.txt")
 els[1:10]
 
-els2011 = readLines("MenTxt/2011.txt")
-els2011[1:10]
-
-eqIndex = grep("^===", els)
+# grep to find "===="" starts, rows above it are headers, rows below are data
+# get index of line that begins with at least three equal signs
+eqIndex = grep("^===", els_2012)
 eqIndex
 
-first3 = substr(els, 1, 3)
+# or using substr
+first3 = substr(els_2012, 1, 3)
 which(first3 == "===")
 
-spacerRow = els[eqIndex]
-headerRow = els[eqIndex - 1]
-body = els[ -(1:eqIndex) ]
+# extract the spacer row ("=== ====") and discard earlier rows
+spacerRow = els_2012[eqIndex]
+headerRow = els_2012[eqIndex - 1] # just spacer row index - 1
+body = els_2012[ -(1:eqIndex) ] # get all except for 1 to spacer row
 
+# format header row to lowercase
 headerRow = tolower(headerRow)
 
+# finding age: use regexpr to find index 
 ageStart = regexpr("ag", headerRow)
 ageStart
+# begins at 49 and is two characters for the header label (49,50)
 
+# use this index position to get age from body in a char vector
 age = substr(body, start = ageStart, stop = ageStart + 1)
 head(age)
 
+# convert to numeric and get summary, median age is 35 for male runners in 2012, youngest is 9, 1 NA
 summary(as.numeric(age))
 
+# search spacer row for blank spaces to generalize this method instead of relying on header values
 blankLocs = gregexpr(" ", spacerRow)
 blankLocs
+# blankLocs lists the blank locations between each "column" on the spacer row of "=== ===== ======"
+# gregexpr searches for a group of matches (much like using () in a regular expression)
+# we can use these positions to extract data and header values by determining start and end of columns
 
+# handle the first column, place 0 into the vector to begin
 searchLocs = c(0, blankLocs[[1]])
 
-Values = mapply(substr, list(body), 
-                start = searchLocs[ -length(searchLocs)] + 1, 
-                stop = searchLocs[ -1 ] - 1)
+# use mapply() and substr to extract all the columns
+# this method iterates over each line in the body
+# mapply gives us a way to call a non-vectorized function in a vectorized way
+# a great explanation: http://www.studytrails.com/r/core/control_structures_r_apply_functions_2/
 
+values = mapply(substr,      # apply substr
+                list(body),  # for each list item in body
+                start = searchLocs[ -length(searchLocs)] + 1,   # for each item in start
+                stop = searchLocs[ -1 ] - 1)                    # and each item in stop
+
+
+# encapsulate finding column locations into a FUN
 findColLocs = function(spacerRow) {
 
-  spaceLocs = gregexpr(" ", spacerRow)[[1]]
+  spaceLocs = gregexpr(" ", spacerRow)[[1]] # find a group of column locs
   rowLength = nchar(spacerRow)
 
   if (substring(spacerRow, rowLength, rowLength) != " ")
@@ -65,85 +308,112 @@ findColLocs = function(spacerRow) {
   else return(c(0, spaceLocs))
 }
 
-selectCols = 
-function(colNames, headerRow, searchLocs) 
+# create FUN to extract certain columns only, all of this is reliant on the spacer row (yikes)
+# takes header row, column names, locations of blanks in separator row
+selectCols = function(colNames, headerRow, searchLocs) 
 {
   sapply(colNames, 
-         function(name, headerRow, searchLocs)
+         function(name, headerRow, searchLocs) # for each name in col names
          {
-           startPos = regexpr(name, headerRow)[[1]]
+           startPos = regexpr(name, headerRow)[[1]] # find position using regex
            if (startPos == -1) 
-             return( c(NA, NA) )
+             return( c(NA, NA) ) # error catch
     
-           index = sum(startPos >= searchLocs)
-           c(searchLocs[index] + 1, searchLocs[index + 1] - 1)
+           index = sum(startPos >= searchLocs) # how many columns including and after?
+           c(searchLocs[index] + 1, searchLocs[index + 1] - 1) # get column width
          },
          headerRow = headerRow, searchLocs = searchLocs )
 }
 
+
+
 searchLocs = findColLocs(spacerRow)
-ageLoc = selectCols("ag", headerRow, searchLocs) 
-ages = mapply(substr, list(body), 
-              start = ageLoc[1,], stop = ageLoc[2, ])
+ageLoc = selectCols("ag", headerRow, searchLocs) # this function returns the index for the column in a matrix
+
+# use ageLoc result to apply substr in a vectorized fashion (this can be expanded to include multi-columns)
+ages = mapply(substr, 
+              list(body), 
+              start = ageLoc[1,], 
+              stop = ageLoc[2, ])
 
 summary(as.numeric(ages))
 
+# now apply to multiple columns
 shortColNames = c("name", "home", "ag", "gun", "net", "time")
 
 locCols = selectCols(shortColNames, headerRow, searchLocs)
+# call locCols and notice how gun time and net time are NA
 
-Values = mapply(substr, list(body), start = locCols[1, ], 
+values = mapply(substr, 
+                list(body), 
+                start = locCols[1, ], 
                 stop = locCols[2, ])
 
-class(Values)
+class(values)
 
 colnames(Values) = shortColNames
 head(Values)
 
 tail(Values)[ , 1:3]
 
+# roll all this mess up into a function for modularity
 extractVariables = 
-  function(file, varNames =c("name", "home", "ag", "gun",
-                             "net", "time"))
+function(file, varNames =c("name", "home", "ag", "gun", "net", "time"))
 {
-       # Find the index of the row with =s
+  # Find the index of the spacer row with =s
   eqIndex = grep("^===", file)
-       # Extract the two key rows and the data
+  
+  # Extract the two key rows and the data
   spacerRow = file[eqIndex] 
   headerRow = tolower(file[ eqIndex - 1 ])
   body = file[ -(1 : eqIndex) ]
        
-       # Obtain the starting and ending positions of variables
+  # Obtain the starting and ending positions of variables
   searchLocs = findColLocs(spacerRow)
   locCols = selectCols(varNames, headerRow, searchLocs)
 
-  Values = mapply(substr, list(body), start = locCols[1, ], 
+  Values = mapply(substr, 
+                  list(body), 
+                  start = locCols[1, ], 
                   stop = locCols[2, ])
+  
   colnames(Values) = varNames
   
   invisible(Values)
 }
 
-mfilenames = paste("MenTxt/", 1999:2012, ".txt", sep = "")
+mfilenames = paste("Data/mens", 1999:2012, ".txt", sep = "")
 menFiles = lapply(mfilenames, readLines)
 names(menFiles) = 1999:2012
+sapply(menFiles, length) # check to see if this worked.....
 
 menResMat = lapply(menFiles, extractVariables)
-length(menResMat)
+length(menResMat) # 14, good
+sapply(menResMat, nrow)  # some nulls fell out but overall data intact
 
-sapply(menResMat, nrow)
+wfilenames = paste("Data/womens", 1999:2012, ".txt", sep = "")
+womenFiles = lapply(wfilenames, readLines)
+names(womenFiles) = 1999:2012
+sapply(womensFiles, length) # readLines worked
+
+# errors out because of missing data in 2001 file
+womenResMat = lapply(womensFiles, extractVariables)
 
 ### The 2001 results for women are missing the === and the column names.
 ### Can we pick it up from the 2001 men? YES! Make an exercise
 #wfilenames = paste("WomenTxt/", 1999:2012, ".txt", sep = "")
 #womenTables = lapply(wfilenames, readLines)
 
-#womenTables[[3]][1:5]
+# lets append some context... 
+womenFiles[[3]] = append(womenFiles[[3]], menFiles[[3]][4:5], after=3)
 
-#names(womenTables) = 1999:2012
-#womenResMat = lapply(womenTables, extractVariables)
-#head(womenResMat[[3]], 10)
-#tail(womenResMat[[3]], 10)
+womenResMat = lapply(womenFiles, extractVariables)
+length(womenResMat) # 14, good
+sapply(womenResMat, nrow)  # some nulls fell out but overall data intact
+
+```
+
+```{r formatting, include=FALSE}
 
 age = as.numeric(menResMat[['2012']][ , 'ag'])
 
@@ -772,203 +1042,6 @@ lines(x = ageV, y = predV, lwd = 3, lty = 2, col = "#4daf4a")
 par(oldPar)
 dev.off()
 ```
-
-```{r web_scraping, include=FALSE, echo=FALSE}
-# Section 2.7 Parsing
-
-library(XML)
-#ubase = "http://www.cherryblossom.org/"
-#url = paste(ubase, "results/2012/2012cucb10m-m.htm", sep = "")
-#doc = htmlParse(url)
-
-# use xpath to get all pre nodes, get nodeset returns a list of all <pre> nodes in a list
-#preNode = getNodeSet(doc, "//pre")
-
-# get text value from the node
-#txt = xmlValue(preNode[[1]])
-
-#nchar(txt)
-
-# start and end of text
-#substr(txt, 1, 50)
-
-#substr(txt, nchar(txt) - 50, nchar(txt))
-
-# split lines by carriage/new line
-#els = strsplit(txt, "\\r\\n")[[1]]
-
-# length of text
-#length(els)
-
-# first few lines are all header
-#els[1:3]
-
-#els[ length(els) ]
-
-# formalize FUN to extract tables from pages for '99 to '12
-# 28 pages in total (14 men + 14 women)
-#extractResTable =
-       # Retrieve data from web site, find preformatted text,
-       # return as a character vector.
-#function(url)
-#{
-#  doc = htmlParse(url)
-#  preNode = getNodeSet(doc, "//pre")
-#  txt = xmlValue(preNode[[1]])
-#  
-#  els = strsplit(txt, "\r\n")[[1]]
-#  if(length(els) == 1){
-#    els = strsplit(txt, "\n")[[1]]
-#  }
-  
-#  return(els)
-#}
-
-#m2012 = extractResTable(url)
-
-#identical(m2012, els)
-
-
-# clean up var names, authors are terrible and causes confusion
-
-#url_base = "http://www.cherryblossom.org/"
-
-# get a list of urls from which to extract the data for men's results
-#urls = paste(ubase, "results/", 1999:2012, "/",
-#             1999:2012, "cucb10m-m.htm", sep = "")
-
-# apply FUN to vector of URLs
-#menTables = lapply(urls, extractResTable)
-
-#options(error = recover)
-#menTables = lapply(urls, extractResTable)
-
-# these are for browing the recover() debugging mode
-#Browse[1]> ls()
-
-#Browse[1]> url
-
-#Browse[1]> length(preNode)
-
-# find that URLs are different depending on the year, great work web devs.
-
-
-extractResTable =
-  #
-  # Retrieve data from web site, 
-  # find the preformatted text,
-  # and write lines or return as a character vector.
-  #
-  function(url = "http://www.cherryblossom.org/results/2009/09cucb-F.htm",
-           year = 1999, sex = "male", file = NULL)
-  {
-    doc = htmlParse(url)
-
-    if (year == 2000) {
-      # Get preformatted text from 4th font element
-      # The top file is ill formed so the <pre> search doesn't work.
-      ff = getNodeSet(doc, "//font")
-      txt = xmlValue(ff[[4]])
-      els = strsplit(txt, "\r\n")[[1]]
-    }
-    
-    else if (year == 2000 & sex == "female"){
-      pres = getNodeSet(doc, "//p") # for bad HTML
-      txt = xmlValue(pres[[1]])
-      els = strsplit(txt, "\r\n")[[1]]
-      
-    }
-    
-    else if (year == 2009 & sex == "male") {
-      # Get preformatted text from <div class="Section1"> element
-      # Each line of results is in a <pre> element
-      div1 = getNodeSet(doc, "//div[@class='Section1']")
-      pres = getNodeSet(div1[[1]], "//pre")
-      els = sapply(pres, xmlValue)
-    }
-    
-    else {
-      # Get preformatted text from <pre> elements
-      pres = getNodeSet(doc, "//pre")
-      txt = xmlValue(pres[[1]])
-      els = strsplit(txt, "\r\n")[[1]]
-      if(length(els) == 1){
-                           els = strsplit(txt, "\n")[[1]]
-      }
-    } 
-    
-    if (is.null(file)) return(els)
-    # Write the lines as a text file.
-    writeLines(els, con = file)
-  }
-```
-
-``` {r data_gather, include=FALSE, echo=FALSE}
-# EDITS & UPDATES
-
-ubase <- paste("http://www.cherryblossom.org/results/", 1999:2012,"/", sep="")
-
-menURLs = 
-  c("cb99m.html", "cb003m.htm", "oof_m.html", "oofm.htm", 
-    "CB03-M.HTM", "men.htm", "CB05-M.htm", "men.htm", "men.htm", 
-    "men.htm", "09cucb-M.htm", "2010cucb10m-m.htm", 
-    "2011cucb10m-m.htm",
-    "2012cucb10m-m.htm")
-
-# paste together base url and mens urls
-urls = paste(ubase, menURLs, sep = "")
-
-options(error = recover)
-
-years = 1999:2012
-options(error = recover)
-files = paste("Data/mens", years, '.txt', sep="")
-
-setwd("~/Datascience/SMU_Data_Science/MSDS_QTW/Unit8_CaseStudy/Unit8/")
-
-# export tables
-menTables = mapply(extractResTable, 
-                   url = urls, 
-                   year = years, 
-                   file=files)
-
-menTables = mapply(extractResTable, 
-                   url = urls, 
-                   year = years)
-
-# check mens table counts
-names(menTables) = years
-sapply(menTables, length)
-
-save(menTables, file = "CBMenTextTables.rda")
-
-
-womenURLs = 
-  c("cb99f.html", "cb003f.htm", "oof_f.html", "ooff.htm", 
-    "CB03-F.HTM", "women.htm", "CB05-F.htm", "women.htm", "women.htm", 
-    "women.htm", "09cucb-F.htm", "2010cucb10m-f.htm", 
-    "2011cucb10m-f.htm",
-    "2012cucb10m-f.htm")
-
-urls = paste(ubase, womenURLs, sep = "")
-files = paste("Data/womens", years, '.txt', sep="")
-
-options(error = recover)
-
-# push women results files
-womenTables = mapply(extractResTable, url = urls, 
-                    year = years, sex = rep("female", 14),
-                    file=files)
-
-names(womenTables) = years
-sapply(womenTables, length)
-
-
-
-
-```
-
-
 
 
 ```{r}
