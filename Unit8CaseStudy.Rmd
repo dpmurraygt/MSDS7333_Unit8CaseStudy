@@ -14,6 +14,8 @@ library(dplyr)
 library(tidyr)
 library(ggplot2)
 library(rvest)
+library(magrittr)
+library(XML)
 ```
 
 ```{r setup, echo=FALSE, include=FALSE}
@@ -24,6 +26,7 @@ knitr::opts_chunk$set(echo = FALSE)
 ```
 
 ```{r make, include=FALSE, cache=TRUE}
+# get and clean data
 source("src/make.R")
 ```
 
@@ -41,594 +44,18 @@ source("src/make.R")
 
 ## References
 
-```{r web_scraping, include=FALSE, echo=FALSE}
-# Section 2.7 Parsing
 
-library(XML)
-#ubase = "http://www.cherryblossom.org/"
-#url = paste(ubase, "results/2012/2012cucb10m-m.htm", sep = "")
-#doc = htmlParse(url)
 
-# use xpath to get all pre nodes, get nodeset returns a list of all <pre> nodes in a list
-#preNode = getNodeSet(doc, "//pre")
 
-# get text value from the node
-#txt = xmlValue(preNode[[1]])
 
-#nchar(txt)
 
-# start and end of text
-#substr(txt, 1, 50)
 
-#substr(txt, nchar(txt) - 50, nchar(txt))
 
-# split lines by carriage/new line
-#els = strsplit(txt, "\\r\\n")[[1]]
 
-# length of text
-#length(els)
 
-# first few lines are all header
-#els[1:3]
 
-#els[ length(els) ]
 
-# formalize FUN to extract tables from pages for '99 to '12
-# 28 pages in total (14 men + 14 women)
-#extractResTable =
-       # Retrieve data from web site, find preformatted text,
-       # return as a character vector.
-#function(url)
-#{
-#  doc = htmlParse(url)
-#  preNode = getNodeSet(doc, "//pre")
-#  txt = xmlValue(preNode[[1]])
-#  
-#  els = strsplit(txt, "\r\n")[[1]]
-#  if(length(els) == 1){
-#    els = strsplit(txt, "\n")[[1]]
-#  }
-  
-#  return(els)
-#}
-
-#m2012 = extractResTable(url)
-
-#identical(m2012, els)
-
-
-# clean up var names, authors are terrible and causes confusion
-
-#url_base = "http://www.cherryblossom.org/"
-
-# get a list of urls from which to extract the data for men's results
-#urls = paste(ubase, "results/", 1999:2012, "/",
-#             1999:2012, "cucb10m-m.htm", sep = "")
-
-# apply FUN to vector of URLs
-#menTables = lapply(urls, extractResTable)
-
-#options(error = recover)
-#menTables = lapply(urls, extractResTable)
-
-# these are for browing the recover() debugging mode
-#Browse[1]> ls()
-
-#Browse[1]> url
-
-#Browse[1]> length(preNode)
-
-# find that URLs are different depending on the year, great work web devs.
-
-
-extractResTable =
-  #
-  # Retrieve data from web site, 
-  # find the preformatted text,
-  # and write lines or return as a character vector.
-  #
-  function(url = "http://www.cherryblossom.org/results/2009/09cucb-F.htm",
-           year = 1999, sex = "male", file = NULL)
-  {
-    doc = htmlParse(url)
-
-    if (year == 2000) {
-      # Get preformatted text from 4th font element
-      # The top file is ill formed so the <pre> search doesn't work.
-      ff = getNodeSet(doc, "//font")
-      txt = xmlValue(ff[[4]])
-      els = strsplit(txt, "\r\n")[[1]]
-    }
-    
-    else if (year == 2000 & sex == "female"){
-      pres = getNodeSet(doc, "//p") # for bad HTML
-      txt = xmlValue(pres[[1]])
-      els = strsplit(txt, "\r\n")[[1]]
-      
-    }
-    
-    else if (year == 2009 & sex == "male") {
-      # Get preformatted text from <div class="Section1"> element
-      # Each line of results is in a <pre> element
-      div1 = getNodeSet(doc, "//div[@class='Section1']")
-      pres = getNodeSet(div1[[1]], "//pre")
-      els = sapply(pres, xmlValue)
-    }
-    
-    else {
-      # Get preformatted text from <pre> elements
-      pres = getNodeSet(doc, "//pre")
-      txt = xmlValue(pres[[1]])
-      els = strsplit(txt, "\r\n")[[1]]
-      if(length(els) == 1){
-                           els = strsplit(txt, "\n")[[1]]
-      }
-    } 
-    
-    if (is.null(file)) return(els)
-    # Write the lines as a text file.
-    writeLines(els, con = file)
-  }
-```
-
-``` {r export_data, include=FALSE, echo=FALSE}
-# EDITS & UPDATES
-
-ubase <- paste("http://www.cherryblossom.org/results/", 1999:2012,"/", sep="")
-
-menURLs = 
-  c("cb99m.html", "cb003m.htm", "oof_m.html", "oofm.htm", 
-    "CB03-M.HTM", "men.htm", "CB05-M.htm", "men.htm", "men.htm", 
-    "men.htm", "09cucb-M.htm", "2010cucb10m-m.htm", 
-    "2011cucb10m-m.htm",
-    "2012cucb10m-m.htm")
-
-# paste together base url and mens urls
-urls = paste(ubase, menURLs, sep = "")
-
-options(error = recover)
-
-years = 1999:2012
-options(error = recover)
-files = paste("Data/mens", years, '.txt', sep="")
-
-# export tables
-menTables = mapply(extractResTable, 
-                   url = urls, 
-                   year = years, 
-                   file = files)
-
-# check mens table counts
-names(menTables) = years
-sapply(menTables, length)
-
-# save(menTables, file = "CBMenTextTables.rda")
-
-# EXPORT WOMENS' DATA
-womenURLs = 
-  c("cb99f.html", "cb003f.htm", "oof_f.html", "ooff.htm", 
-    "CB03-F.HTM", "women.htm", "CB05-F.htm", "women.htm", "women.htm", 
-    "women.htm", "09cucb-F.htm", "2010cucb10m-f.htm", 
-    "2011cucb10m-f.htm",
-    "2012cucb10m-f.htm")
-
-urls = paste(ubase, womenURLs, sep = "")
-files = paste("Data/womens", years, '.txt', sep="")
-
-options(error = recover)
-
-# push women results files
-womenTables = mapply(extractResTable, 
-                    url = urls, 
-                    year = years, 
-                    sex = "female", # need this or vector will be null when considering conditional
-                    file=files)
-
-names(womenTables) = years
-sapply(womenTables, length)
-
-
-```
-
-```{r data_munging, include=FALSE}
-# Nolan and Temple Lang Ch. 2
-
-
-url <- "http://www.cherryblossom.org"
-
-# errors out
-m2012 = read.table(file="MenTxt/2012.txt", skip = 8)
-
-
-els_2011 = readLines("Data/mens2011.txt")
-els_2011[1:10]
-
-# try readlines, as we need custom induction logic
-# time in 2012 == Net Time
-els_2012 = readLines("Data/mens2012.txt")
-els[1:10]
-
-# grep to find "===="" starts, rows above it are headers, rows below are data
-# get index of line that begins with at least three equal signs
-eqIndex = grep("^===", els_2012)
-eqIndex
-
-# or using substr
-first3 = substr(els_2012, 1, 3)
-which(first3 == "===")
-
-# extract the spacer row ("=== ====") and discard earlier rows
-spacerRow = els_2012[eqIndex]
-headerRow = els_2012[eqIndex - 1] # just spacer row index - 1
-body = els_2012[ -(1:eqIndex) ] # get all except for 1 to spacer row
-
-# format header row to lowercase
-headerRow = tolower(headerRow)
-
-# finding age: use regexpr to find index 
-ageStart = regexpr("ag", headerRow)
-ageStart
-# begins at 49 and is two characters for the header label (49,50)
-
-# use this index position to get age from body in a char vector
-age = substr(body, start = ageStart, stop = ageStart + 1)
-head(age)
-
-# convert to numeric and get summary, median age is 35 for male runners in 2012, youngest is 9, 1 NA
-summary(as.numeric(age))
-
-# search spacer row for blank spaces to generalize this method instead of relying on header values
-blankLocs = gregexpr(" ", spacerRow)
-blankLocs
-# blankLocs lists the blank locations between each "column" on the spacer row of "=== ===== ======"
-# gregexpr searches for a group of matches (much like using () in a regular expression)
-# we can use these positions to extract data and header values by determining start and end of columns
-
-# handle the first column, place 0 into the vector to begin
-searchLocs = c(0, blankLocs[[1]])
-
-# use mapply() and substr to extract all the columns
-# this method iterates over each line in the body
-# mapply gives us a way to call a non-vectorized function in a vectorized way
-# a great explanation: http://www.studytrails.com/r/core/control_structures_r_apply_functions_2/
-
-values = mapply(substr,      # apply substr
-                list(body),  # for each list item in body
-                start = searchLocs[ -length(searchLocs)] + 1,   # for each item in start
-                stop = searchLocs[ -1 ] - 1)                    # and each item in stop
-
-
-# encapsulate finding column locations into a FUN
-findColLocs = function(spacerRow) {
-
-  spaceLocs = gregexpr(" ", spacerRow)[[1]] # find a group of column locs
-  rowLength = nchar(spacerRow)
-
-  if (substring(spacerRow, rowLength, rowLength) != " ")
-    return( c(0, spaceLocs, rowLength + 1))
-  else return(c(0, spaceLocs))
-}
-
-# create FUN to extract certain columns only, all of this is reliant on the spacer row (yikes)
-# takes header row, column names, locations of blanks in separator row
-selectCols = function(colNames, headerRow, searchLocs) 
-{
-  sapply(colNames, 
-         function(name, headerRow, searchLocs) # for each name in col names
-         {
-           startPos = regexpr(name, headerRow)[[1]] # find position using regex
-           if (startPos == -1) 
-             return( c(NA, NA) ) # error catch
-    
-           index = sum(startPos >= searchLocs) # how many columns including and after?
-           c(searchLocs[index] + 1, searchLocs[index + 1] - 1) # get column width
-         },
-         headerRow = headerRow, searchLocs = searchLocs )
-}
-
-
-
-searchLocs = findColLocs(spacerRow)
-ageLoc = selectCols("ag", headerRow, searchLocs) # this function returns the index for the column in a matrix
-
-# use ageLoc result to apply substr in a vectorized fashion (this can be expanded to include multi-columns)
-ages = mapply(substr, 
-              list(body), 
-              start = ageLoc[1,], 
-              stop = ageLoc[2, ])
-
-summary(as.numeric(ages))
-
-# now apply to multiple columns
-shortColNames = c("name", "home", "ag", "gun", "net", "time")
-
-locCols = selectCols(shortColNames, headerRow, searchLocs)
-# call locCols and notice how gun time and net time are NA
-
-values = mapply(substr, 
-                list(body), 
-                start = locCols[1, ], 
-                stop = locCols[2, ])
-
-class(values)
-
-colnames(Values) = shortColNames
-head(Values)
-
-tail(Values)[ , 1:3]
-
-# roll all this mess up into a function for modularity
-extractVariables = 
-function(file, varNames =c("name", "home", "ag", "gun", "net", "time"))
-{
-  # Find the index of the spacer row with =s
-  eqIndex = grep("^===", file)
-  
-  # Extract the two key rows and the data
-  spacerRow = file[eqIndex] 
-  headerRow = tolower(file[ eqIndex - 1 ])
-  body = file[ -(1 : eqIndex) ]
-       
-  # Obtain the starting and ending positions of variables
-  searchLocs = findColLocs(spacerRow)
-  locCols = selectCols(varNames, headerRow, searchLocs)
-
-  Values = mapply(substr, 
-                  list(body), 
-                  start = locCols[1, ], 
-                  stop = locCols[2, ])
-  
-  colnames(Values) = varNames
-  
-  invisible(Values)
-}
-
-mfilenames = paste("Data/mens", 1999:2012, ".txt", sep = "")
-menFiles = lapply(mfilenames, readLines)
-names(menFiles) = 1999:2012
-sapply(menFiles, length) # check to see if this worked.....
-
-menResMat = lapply(menFiles, extractVariables)
-length(menResMat) # 14, good
-sapply(menResMat, nrow)  # some nulls fell out but overall data intact
-
-wfilenames = paste("Data/womens", 1999:2012, ".txt", sep = "")
-womenFiles = lapply(wfilenames, readLines)
-names(womenFiles) = 1999:2012
-sapply(womensFiles, length) # readLines worked
-
-# errors out because of missing data in 2001 file
-womenResMat = lapply(womensFiles, extractVariables)
-
-### The 2001 results for women are missing the === and the column names.
-### Can we pick it up from the 2001 men? YES! Make an exercise
-#wfilenames = paste("WomenTxt/", 1999:2012, ".txt", sep = "")
-#womenTables = lapply(wfilenames, readLines)
-
-# lets append some context... 
-womenFiles[[3]] = append(womenFiles[[3]], menFiles[[3]][4:5], after=3)
-
-womenResMat = lapply(womenFiles, extractVariables)
-length(womenResMat) # 14, good
-sapply(womenResMat, nrow)  # some nulls fell out but overall data intact
-
-```
-
-```{r formatting, include=FALSE}
-
-age = as.numeric(menResMat[['2012']][ , 'ag'])
-
-tail(age)
-
-age = sapply(menResMat,
-             function(x) as.numeric(x[ , 'ag']))
-
-
-pdf("CB_BoxplotAgeByYr.pdf", width = 8, height = 5)
-oldPar = par(mar = c(4.1, 4.1, 1, 1))
-
-boxplot(age, ylab = "Age", xlab = "Year")
-
-par(oldPar)
-dev.off()
-
-head(menFiles[['2003']])
-
-menFiles[['2006']][2200:2205]
-
-selectCols = function(shortColNames, headerRow, searchLocs) {
-  sapply(shortColNames, function(shortName, headerRow, searchLocs){
-    startPos = regexpr(shortName, headerRow)[[1]]
-    if (startPos == -1) return( c(NA, NA) )
-    index = sum(startPos >= searchLocs)
-    c(searchLocs[index] + 1, searchLocs[index + 1])
-  }, headerRow = headerRow, searchLocs = searchLocs )
-}
-
-menResMat = lapply(menFiles, extractVariables)
-#womenResMat = lapply(womenFiles, extractVariables)
-
-age = sapply(menResMat, 
-             function(x) as.numeric(x[ , 'ag']))
-
-pdf("CB_BoxplotAgeByYrRevised.pdf", width = 8, height = 5)
-oldPar = par(mar = c(4.1, 4.1, 1, 1))
-boxplot(age, ylab = "Age", xlab = "Year")
-par(oldPar)
-dev.off()
-
-sapply(age,  function(x) sum(is.na(x)))
-
-age2001 = age[["2001"]]
-
-grep("^===", menFiles[['2001']])
-
-badAgeIndex = which(is.na(age2001)) + 5
-menFiles[['2001']][ badAgeIndex ]
- 
-badAgeIndex
-
-extractVariables = 
-function(file, varNames =c("name", "home", "ag", "gun",
-                           "net", "time"))
-{
-  
-  # Find the index of the row with =s
-  eqIndex = grep("^===", file)
-  # Extract the two key rows and the data 
-  spacerRow = file[eqIndex] 
-  headerRow = tolower(file[ eqIndex - 1 ])
-  body = file[ -(1 : eqIndex) ]
-       # Remove footnotes and blank rows
-  footnotes = grep("^[[:blank:]]*(\\*|\\#)", body)
-  if ( length(footnotes) > 0 ) body = body[ -footnotes ]
-  blanks = grep("^[[:blank:]]*$", body)
-  if (length(blanks) > 0 ) body = body[ -blanks ]
-  
-  
-  # Obtain the starting and ending positions of variables   
-  searchLocs = findColLocs(spacerRow)
-  locCols = selectCols(varNames, headerRow, searchLocs)
-  
-  Values = mapply(substr, list(body), start = locCols[1, ], 
-                  stop = locCols[2, ])
-  colnames(Values) = varNames
-  
-  return(Values)
-}
-
-menResMat = lapply(menFiles, extractVariables)
-#womenResMat = lapply(womenFiles, extractVariables)
-
-which(age2001 < 5)
-
-menFiles[['2001']][ which(age2001 < 5) + 5 ]
-
-charTime = menResMat[['2012']][, 'time']
-head(charTime, 5)
-
-tail(charTime, 5)
-
-timePieces = strsplit(charTime, ":")
-
-timePieces[[1]]
-
-tail(timePieces, 1)
-
-timePieces = sapply(timePieces, as.numeric)
-
-runTime = sapply(timePieces, 
-                 function(x) {
-                   if (length(x) == 2) x[1] + x[2]/60
-                   else 60*x[1] + x[2] + x[3]/60
-                 })
-
-summary(runTime)
-
-convertTime = function(time) {
-  timePieces = strsplit(time, ":")
-  timePieces = sapply(timePieces, as.numeric)
-  sapply(timePieces, function(x) {
-                      if (length(x) == 2) x[1] + x[2]/60
-                      else 60*x[1] + x[2] + x[3]/60
-                      })
-}
-
-createDF = 
-function(Res, year, sex) 
-{
-       # Determine which time to use
-  useTime = if( !is.na(Res[1, 'net']) )  
-              Res[ , 'net']
-            else if( !is.na(Res[1, 'gun']) ) 
-               Res[ , 'gun']
-            else 
-               Res[ , 'time']
-
-  runTime = convertTime(useTime)
-  
-  Results = data.frame(year = rep(year, nrow(Res)),
-                       sex = rep(sex, nrow(Res)),
-                       name = Res[ , 'name'],
-                       home = Res[ , 'home'],
-                       age = as.numeric(Res[, 'ag']), 
-                       runTime = runTime,
-                       stringsAsFactors = FALSE)
-  invisible(Results)
-}
-
-menDF = mapply(createDF, menResMat, year = 1999:2012,
-               sex = rep("M", 14), SIMPLIFY = FALSE)
-
-warnings()[ c(1:2, 49:50) ]
-
-sapply(menDF, function(x) sum(is.na(x$runTime)))
-
-createDF = function(Res, year, sex) 
-{
-  # Determine which time to use
-  if ( !is.na(Res[1, 'net']) ) useTime = Res[ , 'net']
-  else if ( !is.na(Res[1, 'gun']) ) useTime = Res[ , 'gun']
-  else useTime = Res[ , 'time']
-  
-  # Remove # and * and blanks from time
-  useTime = gsub("[#\\*[:blank:]]", "", useTime)
-  runTime = convertTime(useTime[ useTime != "" ])
-  
-  # Drop rows with no time
-  Res = Res[ useTime != "", ]
-  
-  Results = data.frame(year = rep(year, nrow(Res)),
-                       sex = rep(sex, nrow(Res)),
-                       name = Res[ , 'name'], home = Res[ , 'home'],
-                       age = as.numeric(Res[, 'ag']), 
-                       runTime = runTime,
-                       stringsAsFactors = FALSE)
-  invisible(Results)
-}
-
-menDF = mapply(createDF, menResMat, year = 1999:2012,
-               sex = rep("M", 14), SIMPLIFY = FALSE)
-
-sapply(menDF, function(x) sum(is.na(x$runTime)))
-
-separatorIdx = grep("^===", menFiles[["2006"]])
-separatorRow = menFiles[['2006']][separatorIdx]
-separatorRowX = paste(substring(separatorRow, 1, 63), " ", 
-                      substring(separatorRow, 65, nchar(separatorRow)), 
-                      sep = "")
-menFiles[['2006']][separatorIdx] = separatorRowX
-
-menResMat = sapply(menFiles, extractVariables)
-menDF = mapply(createDF, menResMat, year = 1999:2012,
-               sex = rep("M", 14), SIMPLIFY = FALSE)
-
-#separatorIdx = grep("^===", womenFiles[["2006"]])
-#separatorRow = womenFiles[['2006']][separatorIdx]
-#separatorRowX = paste(substring(separatorRow, 1, 63), " ", 
-#                      substring(separatorRow, 65, nchar(separatorRow)), 
-#                      sep = "")
-#womenFiles[['2006']][separatorIdx] = separatorRowX
-
-#womenResMat = sapply(womenFiles, extractVariables)
-#womenDF = mapply(createDF, womenResMat, year = 1999:2012,
-#               sex = rep("W", 14), SIMPLIFY = FALSE)
-
-pdf("CB_BoxplotTimeByYr.pdf", width = 8, height = 5)
-boxplot(sapply(menDF, function(x) x$runTime), 
-        xlab = "Year", ylab = "Run Time (min)")
-dev.off()
-
-cbMen = do.call(rbind, menDF)
-save(cbMen, file = "cbMen.rda")
-
-dim(cbMen)
-
-load("cbMen.rda")
-
-pdf("CB_Overplot.pdf", width = 8, height = 6)
-oldPar = par(mar = c(4.1, 4.1, 1, 1))
-
+``` {r eda, include=FALSE}
 plot(runTime ~ age, data = cbMen, ylim = c(40, 180),
      xlab = "Age (years)", ylab = "Run Time (minutes)")
 
@@ -1062,5 +489,588 @@ dev.off()
 
 ```{r}
 #Come to a statistical conclusion and call this shit DONE
+
+```
+
+
+
+# APPENDIX - BOOK CODE
+
+```{r web_scraping, include=FALSE, echo=FALSE, eval=FALSE}
+# Section 2.7 Parsing
+#ubase = "http://www.cherryblossom.org/"
+#url = paste(ubase, "results/2012/2012cucb10m-m.htm", sep = "")
+#doc = htmlParse(url)
+
+# use xpath to get all pre nodes, get nodeset returns a list of all <pre> nodes in a list
+#preNode = getNodeSet(doc, "//pre")
+
+# get text value from the node
+#txt = xmlValue(preNode[[1]])
+
+#nchar(txt)
+
+# start and end of text
+#substr(txt, 1, 50)
+
+#substr(txt, nchar(txt) - 50, nchar(txt))
+
+# split lines by carriage/new line
+#els = strsplit(txt, "\\r\\n")[[1]]
+
+# length of text
+#length(els)
+
+# first few lines are all header
+#els[1:3]
+
+#els[ length(els) ]
+
+# formalize FUN to extract tables from pages for '99 to '12
+# 28 pages in total (14 men + 14 women)
+#extractResTable =
+       # Retrieve data from web site, find preformatted text,
+       # return as a character vector.
+#function(url)
+#{
+#  doc = htmlParse(url)
+#  preNode = getNodeSet(doc, "//pre")
+#  txt = xmlValue(preNode[[1]])
+#  
+#  els = strsplit(txt, "\r\n")[[1]]
+#  if(length(els) == 1){
+#    els = strsplit(txt, "\n")[[1]]
+#  }
+  
+#  return(els)
+#}
+
+#m2012 = extractResTable(url)
+
+#identical(m2012, els)
+
+
+# clean up var names, authors are terrible and causes confusion
+
+#url_base = "http://www.cherryblossom.org/"
+
+# get a list of urls from which to extract the data for men's results
+#urls = paste(ubase, "results/", 1999:2012, "/",
+#             1999:2012, "cucb10m-m.htm", sep = "")
+
+# apply FUN to vector of URLs
+#menTables = lapply(urls, extractResTable)
+
+#options(error = recover)
+#menTables = lapply(urls, extractResTable)
+
+# these are for browing the recover() debugging mode
+#Browse[1]> ls()
+
+#Browse[1]> url
+
+#Browse[1]> length(preNode)
+
+# find that URLs are different depending on the year, great work web devs.
+
+
+extractResTable =
+  #
+  # Retrieve data from web site, 
+  # find the preformatted text,
+  # and write lines or return as a character vector.
+  #
+  function(url = "http://www.cherryblossom.org/results/2009/09cucb-F.htm",
+           year = 1999, sex = "male", file = NULL)
+  {
+    doc = htmlParse(url)
+
+    if (year == 2000) {
+      # Get preformatted text from 4th font element
+      # The top file is ill formed so the <pre> search doesn't work.
+      ff = getNodeSet(doc, "//font")
+      txt = xmlValue(ff[[4]])
+      els = strsplit(txt, "\r\n")[[1]]
+    }
+    
+    else if (year == 2000 & sex == "female"){
+      pres = getNodeSet(doc, "//p") # for bad HTML
+      txt = xmlValue(pres[[1]])
+      els = strsplit(txt, "\r\n")[[1]]
+      
+    }
+    
+    else if (year == 2009 & sex == "male") {
+      # Get preformatted text from <div class="Section1"> element
+      # Each line of results is in a <pre> element
+      div1 = getNodeSet(doc, "//div[@class='Section1']")
+      pres = getNodeSet(div1[[1]], "//pre")
+      els = sapply(pres, xmlValue)
+    }
+    
+    else {
+      # Get preformatted text from <pre> elements
+      pres = getNodeSet(doc, "//pre")
+      txt = xmlValue(pres[[1]])
+      els = strsplit(txt, "\r\n")[[1]]
+      if(length(els) == 1){
+                           els = strsplit(txt, "\n")[[1]]
+      }
+    } 
+    
+    if (is.null(file)) return(els)
+    # Write the lines as a text file.
+    writeLines(els, con = file)
+  }
+```
+
+```{r data_munging, include=FALSE}
+# Nolan and Temple Lang Ch. 2
+
+url <- "http://www.cherryblossom.org"
+
+# errors out
+#m2012 = read.table(file="MenTxt/2012.txt", skip = 8)
+
+els_2011 = readLines("Data/mens2011.txt")
+els_2011[1:10]
+
+# try readlines, as we need custom induction logic
+# time in 2012 == Net Time
+els_2012 = readLines("Data/mens2012.txt")
+els_2012[1:10]
+
+# grep to find "===="" starts, rows above it are headers, rows below are data
+# get index of line that begins with at least three equal signs
+eqIndex = grep("^===", els_2012)
+eqIndex
+
+# or using substr
+first3 = substr(els_2012, 1, 3)
+which(first3 == "===")
+
+# extract the spacer row ("=== ====") and discard earlier rows
+spacerRow = els_2012[eqIndex]
+headerRow = els_2012[eqIndex - 1] # just spacer row index - 1
+body = els_2012[ -(1:eqIndex) ] # get all except for 1 to spacer row
+
+# format header row to lowercase
+headerRow = tolower(headerRow)
+
+# finding age: use regexpr to find index 
+ageStart = regexpr("ag", headerRow)
+ageStart
+# begins at 49 and is two characters for the header label (49,50)
+
+# use this index position to get age from body in a char vector
+age = substr(body, start = ageStart, stop = ageStart + 1)
+head(age)
+
+# convert to numeric and get summary, median age is 35 for male runners in 2012, youngest is 9, 1 NA
+summary(as.numeric(age))
+
+# search spacer row for blank spaces to generalize this method instead of relying on header values
+blankLocs = gregexpr(" ", spacerRow)
+blankLocs
+# blankLocs lists the blank locations between each "column" on the spacer row of "=== ===== ======"
+# gregexpr searches for a group of matches (much like using () in a regular expression)
+# we can use these positions to extract data and header values by determining start and end of columns
+
+# handle the first column, place 0 into the vector to begin
+searchLocs = c(0, blankLocs[[1]])
+
+# use mapply() and substr to extract all the columns
+# this method iterates over each line in the body
+# mapply gives us a way to call a non-vectorized function in a vectorized way
+# a great explanation: http://www.studytrails.com/r/core/control_structures_r_apply_functions_2/
+
+values = mapply(substr,      # apply substr
+                list(body),  # for each list item in body
+                start = searchLocs[ -length(searchLocs)] + 1,   # for each item in start
+                stop = searchLocs[ -1 ] - 1)                    # and each item in stop
+
+
+# encapsulate finding column locations into a FUN
+findColLocs = function(spacerRow) {
+
+  spaceLocs = gregexpr(" ", spacerRow)[[1]] # find a group of column locs
+  rowLength = nchar(spacerRow)
+
+  if (substring(spacerRow, rowLength, rowLength) != " ")
+    return( c(0, spaceLocs, rowLength + 1))
+  else return(c(0, spaceLocs))
+}
+
+# create FUN to extract certain columns only, all of this is reliant on the spacer row (yikes)
+# takes header row, column names, locations of blanks in separator row
+selectCols = function(colNames, headerRow, searchLocs) 
+{
+  sapply(colNames, 
+         function(name, headerRow, searchLocs) # for each name in col names
+         {
+           startPos = regexpr(name, headerRow)[[1]] # find position using regex
+           if (startPos == -1) 
+             return( c(NA, NA) ) # error catch
+    
+           index = sum(startPos >= searchLocs) # how many columns including and after?
+           c(searchLocs[index] + 1, searchLocs[index + 1] - 1) # get column width as separate entries in a matrix
+         },
+         headerRow = headerRow, searchLocs = searchLocs ) # satiate the other function here, this is wasteful
+}
+
+
+searchLocs = findColLocs(spacerRow)
+ageLoc = selectCols("ag", headerRow, searchLocs) # this function returns the index for the column in a matrix
+
+# use ageLoc result to apply substr in a vectorized fashion (this can be expanded to include multi-columns)
+ages = mapply(substr, 
+              list(body), 
+              start = ageLoc[1,], 
+              stop = ageLoc[2, ])
+
+summary(as.numeric(ages))
+
+# now apply to multiple columns
+shortColNames = c("name", "home", "ag", "gun", "net", "time")
+
+locCols = selectCols(shortColNames, headerRow, searchLocs)
+# call locCols and notice how gun time and net time are NA
+
+values = mapply(substr, 
+                list(body), 
+                start = locCols[1, ], 
+                stop = locCols[2, ])
+
+class(values)
+
+colnames(values) = shortColNames
+head(values)
+
+tail(values)[ , 1:3]
+
+# roll all this mess up into a function for modularity
+extractVariables = 
+function(file, varNames =c("name", "home", "ag", "gun", "net", "time"))
+{
+  # Find the index of the spacer row with =s
+  eqIndex = grep("^===", file)
+  
+  # Extract the two key rows and the data
+  spacerRow = file[eqIndex] 
+  headerRow = tolower(file[ eqIndex - 1 ])
+  body = file[ -(1 : eqIndex) ]
+       
+  # Obtain the starting and ending positions of variables
+  searchLocs = findColLocs(spacerRow)
+  locCols = selectCols(varNames, headerRow, searchLocs)
+
+  values = mapply(substr, 
+                  list(body), 
+                  start = locCols[1, ], 
+                  stop = locCols[2, ])
+  
+  colnames(values) = varNames
+  
+  invisible(values)
+}
+
+mfilenames = paste("Data/mens", 1999:2012, ".txt", sep = "")
+menFiles = lapply(mfilenames, readLines)
+names(menFiles) = 1999:2012
+sapply(menFiles, length) # check to see if this worked.....
+
+menResMat = lapply(menFiles, extractVariables)
+length(menResMat) # 14, good
+sapply(menResMat, nrow)  # some nulls fell out but overall data intact
+
+wfilenames = paste("Data/womens", 1999:2012, ".txt", sep = "")
+womenFiles = lapply(wfilenames, readLines)
+names(womenFiles) = 1999:2012
+sapply(womenFiles, length) # readLines worked
+
+# errors out because of missing data in 2001 file!
+# womenResMat = lapply(womenFiles, extractVariables)
+
+### The 2001 results for women are missing the === and the column names.
+### Can we pick it up from the 2001 men? YES! Make an exercise
+#wfilenames = paste("WomenTxt/", 1999:2012, ".txt", sep = "")
+#womenTables = lapply(wfilenames, readLines)
+
+# lets append some context... 
+womenFiles[[3]] = append(womenFiles[[3]], menFiles[[3]][4:5], after=3)
+
+womenResMat = lapply(womenFiles, extractVariables)
+length(womenResMat) # 14, good
+sapply(womenResMat, nrow)  # some nulls fell out but overall data intact
+```
+
+```{r data_cleaning, include=FALSE}
+# ADJUSTED AND PART OF MAKE FILE
+# keep track of year and sex, clean variables
+
+# use as.numeric to convert age ('ag') in the 2012 matrix
+age = as.numeric(menResMat[['2012']][ , 'ag'])
+tail(age)
+
+# apply over each matrix, warnings introduced for NAs coerced
+age = sapply(menResMat,
+             function(x) as.numeric(x[ , 'ag']))
+
+
+
+
+# 2003 and 2006 are wrong, 2003 median age is ~3 years old
+# 2006 has first quartile of 3-4 year olds....
+
+#pdf("Images/CB_BoxplotAgeByYr.pdf", width = 8, height = 5)
+#oldPar = par(mar = c(4.1, 4.1, 1, 1))
+boxplot(age, ylab = "Age", xlab = "Year")
+#par(oldPar)
+#dev.off()
+
+#age values shifted right one space outside of our respective spacer row boundaries!
+head(menFiles[['2003']])
+
+# in 2006, spacing is off to rigt in multiple columns
+menFiles[['2006']][2200:2205]
+
+
+# solve by including blank position
+selectCols = function(shortColNames, headerRow, searchLocs) {
+  sapply(shortColNames, function(shortName, headerRow, searchLocs){
+    startPos = regexpr(shortName, headerRow)[[1]]
+    
+    if (startPos == -1) return( c(NA, NA) )
+    
+    index = sum(startPos >= searchLocs)
+    c(searchLocs[index] + 1, searchLocs[index + 1]) # get rid of the -1 in the second term
+  }, 
+  
+  headerRow = headerRow, searchLocs = searchLocs )
+}
+
+# check to see if this made a difference
+menResMat = lapply(menFiles, extractVariables)
+#womenResMat = lapply(womenFiles, extractVariables)
+
+# still seeing NAs
+age = sapply(menResMat, 
+             function(x) as.numeric(x[ , 'ag']))
+
+# much better from an age perspective
+# boxplot with mens age first fix after adjusted searchLocs
+boxplot(age, ylab = "Age", xlab = "Year")
+
+# now take care of NAs, count for each matrix
+sapply(age,  function(x) sum(is.na(x)))
+
+# investigate the 61 NAs in 2001
+age2001 = age[["2001"]]
+
+# explore original raw files, we dropped header in our latet file, so need to add index back in to offset
+grep("^===", menFiles[['2001']])
+
+badAgeIndex = which(is.na(age2001)) + 5
+menFiles[['2001']][ badAgeIndex ]
+
+# scattered throughout file
+badAgeIndex
+
+extractVariables = 
+function(file, varNames =c("name", "home", "ag", "gun",
+                           "net", "time"))
+{
+  
+  # Find the index of the row with =s
+  eqIndex = grep("^===", file)
+  # Extract the two key rows and the data 
+  spacerRow = file[eqIndex] 
+  headerRow = tolower(file[ eqIndex - 1 ])
+  body = file[ -(1 : eqIndex) ]
+  # Remove footnotes and blank rows
+  footnotes = grep("^[[:blank:]]*(\\*|\\#)", body)
+  if ( length(footnotes) > 0 ) body = body[ -footnotes ]
+  blanks = grep("^[[:blank:]]*$", body)
+  if (length(blanks) > 0 ) body = body[ -blanks ]
+  
+  
+  # Obtain the starting and ending positions of variables   
+  searchLocs = findColLocs(spacerRow)
+  locCols = selectCols(varNames, headerRow, searchLocs)
+  
+  Values = mapply(substr, list(body), start = locCols[1, ], 
+                  stop = locCols[2, ])
+  colnames(Values) = varNames
+  
+  return(Values)
+}
+
+menResMat = lapply(menFiles, extractVariables)
+#womenResMat = lapply(womenFiles, extractVariables)
+
+# address minimum age issues in 2001, 2002 and 2003
+which(age2001 < 5)
+
+# find lines corresponding to the indices, age shows zero, hold for analysis
+menFiles[['2001']][ which(age2001 < 5) + 5 ]
+
+
+# time variable creation
+charTime = menResMat[['2012']][, 'time']
+head(charTime, 5)
+
+tail(charTime, 5)
+
+# use str split on colons to piece them up
+timePieces = strsplit(charTime, ":")
+
+timePieces[[1]]
+
+tail(timePieces, 1)
+
+timePieces = sapply(timePieces, as.numeric)
+
+# report time in minutes
+runTime = sapply(timePieces, 
+                 function(x) {
+                   if (length(x) == 2) x[1] + x[2]/60
+                   else 60*x[1] + x[2] + x[3]/60
+                 })
+
+summary(runTime)
+
+# encapsulte into converTime
+convertTime = function(time) {
+  timePieces = strsplit(time, ":")
+  timePieces = sapply(timePieces, as.numeric)
+  sapply(timePieces, function(x) {
+                      if (length(x) == 2) x[1] + x[2]/60
+                      else 60*x[1] + x[2] + x[3]/60
+                      })
+}
+
+# create final dataframe for analysis
+
+createDF = 
+function(Res, year, sex) 
+{
+  # Determine which time to use
+  useTime = if( !is.na(Res[1, 'net']) )  
+              Res[ , 'net']
+            else if( !is.na(Res[1, 'gun']) ) 
+               Res[ , 'gun']
+            else 
+               Res[ , 'time']
+
+  # convert time to minutes
+  runTime = convertTime(useTime)
+  
+  Results = data.frame(year = rep(year, nrow(Res)), # fill year into df
+                       sex = rep(sex, nrow(Res)), # fill sex into df
+                       name = Res[ , 'name'],
+                       home = Res[ , 'home'],
+                       age = as.numeric(Res[, 'ag']), 
+                       runTime = runTime,
+                       stringsAsFactors = FALSE)
+  invisible(Results)
+}
+
+# create men's DF from each matrix
+#menDF = mapply(createDF, menResMat, year = 1999:2012,
+#               sex = rep("M", 14), SIMPLIFY = FALSE)
+# more Nas from time being coerced to NA
+#warnings()[ c(1:2, 49:50) ]
+
+sapply(menDF, function(x) sum(is.na(x$runTime)))
+
+
+# adjust for footnotes in run time and blanks
+createDF = function(Res, year, sex) 
+{
+  # Determine which time to use
+  if ( !is.na(Res[1, 'net']) ) useTime = Res[ , 'net']
+  else if ( !is.na(Res[1, 'gun']) ) useTime = Res[ , 'gun']
+  else useTime = Res[ , 'time']
+  
+  # Remove # and * and blanks from time
+  useTime = gsub("[#\\*[:blank:]]", "", useTime)
+  runTime = convertTime(useTime[ useTime != "" ])
+  
+  # Drop rows with no time
+  Res = Res[ useTime != "", ]
+  if(sex=='W'){
+    
+    age = gsub("   ", "0  ", Res[,'ag'])
+    age = gsub("XX "," 0 ", age)
+    
+    Res[, 'ag'] = age
+  }
+  
+  Results = data.frame(year = rep(year, nrow(Res)),
+                       sex = rep(sex, nrow(Res)),
+                       name = Res[ , 'name'], home = Res[ , 'home'],
+                       age = as.numeric(Res[, 'ag']), 
+                       runTime = runTime,
+                       stringsAsFactors = FALSE)
+  invisible(Results)
+}
+
+# still a lot of NAs from 2006 with incorrect spacer row!
+#menDF = mapply(createDF, menResMat, year = 1999:2012,
+#               sex = rep("M", 14), SIMPLIFY = FALSE)
+
+sapply(menDF, function(x) sum(is.na(x$runTime)))
+
+# FIX 2006
+separatorIdx = grep("^===", menFiles[["2006"]])
+separatorRow = menFiles[['2006']][separatorIdx]
+separatorRowX = paste(substring(separatorRow, 1, 63), " ", 
+                      substring(separatorRow, 65, nchar(separatorRow)), 
+                      sep = "")
+menFiles[['2006']][separatorIdx] = separatorRowX
+
+# FINALLY good to go
+menResMat = sapply(menFiles, extractVariables)
+menDF = mapply(createDF, menResMat, year = 1999:2012,
+               sex = rep("M", 14), SIMPLIFY = FALSE)
+
+
+# clean 2006 file with bad separator for women as well
+separatorIdx = grep("^===", womenFiles[["2006"]])
+separatorRow = womenFiles[['2006']][separatorIdx]
+separatorRowX = paste(substring(separatorRow, 1, 63), " ", 
+                      substring(separatorRow, 65, nchar(separatorRow)), 
+                      sep = "")
+womenFiles[['2006']][separatorIdx] = separatorRowX
+
+womenResMat = sapply(womenFiles, extractVariables)
+
+# women files have issues with ages of "XX" and "   ", adjusted previous create DF for this issue
+womenDF = mapply(createDF, womenResMat, year = 1999:2012,
+                 sex = rep("W", 14), SIMPLIFY = FALSE)
+
+# womens files have some missing ages being coerced to NA. 
+# Let's fix and insert zeros and take care of later in analysis
+# initial analysis shows one age of XX in women's files, need to clean this as well
+# implemented in createDF above
+# lapply(womenDF, function(x) {x[!complete.cases(x),] })
+# sapply(womenResMat, function(x){ sum(x[,'ag'] == "   ")})
+# womenResMat[[4]][3261,]
+
+
+#pdf("CB_BoxplotTimeByYr.pdf", width = 8, height = 5)
+boxplot(sapply(menDF, function(x) x$runTime), 
+        xlab = "Year", ylab = "Run Time (min)")
+#dev.off()
+
+cbMen = do.call(rbind, menDF)
+save(cbMen, file = "cbMen.rda")
+
+dim(cbMen)
+
+load("cbMen.rda")
+
+pdf("CB_Overplot.pdf", width = 8, height = 6)
+oldPar = par(mar = c(4.1, 4.1, 1, 1))
 
 ```
