@@ -16,11 +16,12 @@ findColLocs = function(spacerRow) {
 
 selectCols = function(shortColNames, headerRow, searchLocs) {
   sapply(shortColNames, function(shortName, headerRow, searchLocs){
+    
     startPos = regexpr(shortName, headerRow)[[1]]
     
     if (startPos == -1) return( c(NA, NA) )
     
-    index = sum(startPos >= searchLocs)
+    index = sum(startPos >= searchLocs) # this is dependent upon ORDER of cols
     c(searchLocs[index] + 1, searchLocs[index + 1]) # get rid of the -1 in the second term
   }, 
   
@@ -82,13 +83,10 @@ createDF = function(Res, year, sex)
   
   # Drop rows with no time
   Res = Res[ useTime != "", ]
-  if(sex=='W'){
-    
-    age = gsub("   ", "0  ", Res[,'ag'])
-    age = gsub("XX "," 0 ", age)
-    
-    Res[, 'ag'] = age
-  }
+  
+  age = gsub("X{2}\\s{1}?|\\s{3}?","0  ", Res[,'ag']) # authors' methods did not catch all blanks "   " for men 
+                                                      # handle women's XX's and blanks
+  Res[, 'ag'] = age
   
   Results = data.frame(year = rep(year, nrow(Res)),
                        sex = rep(sex, nrow(Res)),
@@ -129,7 +127,7 @@ menFiles[['2006']][separatorIdx] = separatorRowX
 menResMat = sapply(menFiles, extractVariables)
 menDF = mapply(createDF, menResMat, year = 1999:2012,
                sex = rep("M", 14), SIMPLIFY = FALSE)
-sapply(menDF, function(x) sum(is.na(x$runTime))) # check OK
+
 
 
 # clean 2006 file with bad separator for women as well
@@ -145,7 +143,12 @@ womenResMat = sapply(womenFiles, extractVariables)
 womenDF = mapply(createDF, womenResMat, year = 1999:2012,
                  sex = rep("W", 14), SIMPLIFY = FALSE)
 
+
 cbMen = do.call(rbind, menDF)
+na.fail(cbMen) # check
+
 cbWomen = do.call(rbind, womenDF)
+na.fail(cbWomen) #check
+
 save(cbMen, file = "Data/cbMen.rda")
 save(cbWomen, file = "Data/cbWomen.rda")

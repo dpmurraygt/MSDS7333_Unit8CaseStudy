@@ -92,3 +92,6 @@ womenTables = mapply(extractResTable,
                      sex = "female", # need this or vector will be null when considering conditional
                      file=files)
 
+
+
+
