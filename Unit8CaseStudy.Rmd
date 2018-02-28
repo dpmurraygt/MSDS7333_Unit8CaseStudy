@@ -56,108 +56,141 @@ source("src/make.R")
 
 
 ``` {r eda, include=FALSE}
+
+# overplotting issues
 plot(runTime ~ age, data = cbMen, ylim = c(40, 180),
      xlab = "Age (years)", ylab = "Run Time (minutes)")
 
-par(oldPar)
-dev.off()
-
+# use color brewer to clean up overplotting
 library(RColorBrewer)
 ls("package:RColorBrewer")
 
+# display help with colors
 display.brewer.all()
 
 Purples8 = brewer.pal(9, "Purples")[8]
+
+# returns RBG hex
 Purples8
 
+# append alpha
 Purples8A = paste(Purples8, "14", sep = "")
 
-pdf("CB_OverplotTransparent.pdf", width = 8, height = 6)
-oldPar = par(mar = c(4.1, 4.1, 1, 1))
+# plot with purple alpha, notice upward curbe in times as age increases
 plot(runTime ~ jitter(age, amount = 0.5), 
      data = cbMen, 
-     pch = 19,cex = 0.2, col = Purples8A,
+     pch = 19, cex = 0.2, col = Purples8A,
      ylim = c(45, 165), xlim = c(15, 85),
      xlab = "Age (years)", ylab = "Run Time (minutes)")
-par(oldPar)
-dev.off()
 
-pdf("CB_SmoothScatter.pdf", width = 8, height = 6)
-oldPar = par(mar = c(4.1, 4.1, 1, 1))
+# plot histogram
+hist(cbMen$runTime)
+library(e1071) 
+skewness(cbMen$runTime) # right skew
 
+# smooth density representation of scatter plot using color
+# uses statistical techniques to building regions that vary by color
+# color at (x,y) location is determined by density of points in a small region around the point
+# average them, yields smoother plot with dark shades == high density
+
+# represent dense data more efficiently:
 smoothScatter(y = cbMen$runTime, x = cbMen$age,
               ylim = c(40, 165), xlim = c(15, 85),
               xlab = "Age (years)", ylab = "Run Time (minutes)")
 
-par(oldPar)
-dev.off()
-
+# display summary statistics of run time for subgroups of runners with roughly same age
+# remove outlier runners
 cbMenSub = cbMen[cbMen$runTime > 30 &
-                 !is.na(cbMen$age) & cbMen$age > 15, ]
+                 !is.na(cbMen$age) & cbMen$age > 15
+                 & cbMen$age != 0, ]
 
+# cut data into different categories for ages (15 to 90 by 10s)
 ageCat = cut(cbMenSub$age, breaks = c(seq(15, 75, 10), 90))
 table(ageCat)
 
-pdf("CB_Boxplots.pdf", width = 8, height = 6)
-oldPar = par(mar = c(4.1, 4.1, 1, 1))
-
+# can easily make out increases in time based on age!
 plot(cbMenSub$runTime ~ ageCat, 
      xlab = "Age (years)", ylab = "Run Time (minutes)")
 
-par(oldPar)
-dev.off()
+```
 
+```{r lm_avg_performance, include=FALSE}
+
+# fit a simple linear regression model
 lmAge = lm(runTime ~ age, data = cbMenSub)
 
+# positive coefficient for age as expected
 lmAge$coefficients
 
+# age is significant in the model, r squared is terrible, doesnt describe variance
+# can see the line doesnt model 1Q and 3Q of data well, median is closer
 summary(lmAge)
 
 class(lmAge)
 
-pdf("CB_ResidSimpleLM.pdf", width = 8, height = 6)
-oldPar = par(mar = c(4.1, 4.1, 1, 1))
-
+# we plot the residuals against age to see how this line fits
+# can call residuals data from list returned via lmAge
 smoothScatter(x = cbMenSub$age, y = lmAge$residuals,
               xlab = "Age (years)", ylab = "Residuals")
 abline(h = 0, col = "purple", lwd = 3)
  
+# fit locally weighted curve to the data to discern patterns
 resid.lo = loess(resids ~ age, 
                  data = data.frame(resids = residuals(lmAge),
                                    age = cbMenSub$age))
 
+# predict average residual for each year of age
 age20to80 = 20:80
 
+# predict locally fitted values from 20 to 80
 resid.lo.pr = 
-  predict(resid.lo, newdata = data.frame(age = age20to80))
+  predict(resid.lo, 
+          newdata = data.frame(age = age20to80))
 
-lines(x = age20to80, y = resid.lo.pr, col = "green", lwd = 2)
-par(oldPar)
-dev.off()
+# plot LOESS predictions for residuals
+# can easily see non-linear relationship as LOESS curves up as age increases
+# lin reg does a poor job modeling curvature in runtime given age for older men
+lines(x = age20to80, 
+      y = resid.lo.pr, 
+      col = "green", 
+      lwd = 2)
 
+
+# fitting a more complex model to predict runTime
+# LOESS
 menRes.lo = loess(runTime ~ age, cbMenSub)
-
 menRes.lo.pr = predict(menRes.lo, data.frame(age = age20to80))
 
-over50 = pmax(0, cbMenSub$age - 50)
+# Piecewise Linear Model with different segments
+# allows us to bend the line at certain points
+# hinge at 30,40,50,60
 
+# consider one hinge at over 50
+# coefficient c for over50 is change in slope from below 50 to above 50 and intercept makes segs
+# connect
+over50 = pmax(0, cbMenSub$age - 50) # zero out anything 50 and under and use this var in lm() call
 lmOver50 = lm(runTime ~ age + over50, data = cbMenSub)
 
 summary(lmOver50)
 
+# create hingest
 decades = seq(30, 60, by = 10)
+# get a list of numeric vectors for each hinge for the piecewise regression equation
 overAge = lapply(decades, 
                  function(x) pmax(0, (cbMenSub$age - x)))
 names(overAge) = paste("over", decades, sep = "")
 overAge = as.data.frame(overAge)
 tail(overAge)
 
-lmPiecewise = lm(runTime ~ . , 
+# now create piecewise model
+lmPiecewise = lm(runTime ~ . , # include all covariates except for run time in DF
                  data = cbind(cbMenSub[, c("runTime", "age")], 
-                              overAge))
+                              overAge)) # bind hinge variables
 
+# over 60 not different from over 50
 summary(lmPiecewise)
 
+# how do we plot? use predict, but must set up data to fit model
 overAge20 = lapply(decades, function(x) pmax(0, (age20to80 - x)))
 names(overAge20) = paste("over", decades, sep = "")
 overAgeDF = cbind(age = data.frame(age = age20to80), overAge20)
@@ -166,68 +199,59 @@ tail(overAgeDF)
 
 predPiecewise = predict(lmPiecewise, overAgeDF)
 
+
+# plot two methods against one another
 plot(predPiecewise ~ age20to80,
      type = "l", col = "purple", lwd = 3,
      xlab = "Age (years)", ylab = "Run Time Prediction")
 
 lines(x = age20to80, y = menRes.lo.pr, 
       col = "green", lty = 2, lwd = 3)
+
 legend("topleft", col = c("purple", "green"),
        lty = c(1, 2), lwd= 3,
        legend = c("Piecewise Linear", "Loess Curve"), bty = "n")
 
-pdf("CB_PiecewiseLoessCurves.pdf", width = 8, height = 6)
-plot(predPiecewise ~ age20to80,
-     type = "l", col = "#984ea3", lwd = 3,
-  #   type = "l", col = "purple", lwd = 2,
-     xlab = "Age (years)", ylab = "Run Time Prediction")
+# piecewise not able to capture over 70 because we didnt hinge on it
 
-lines(x = age20to80, y = menRes.lo.pr, col = "#4daf4a", lwd = 3, lty = 2)
-legend("topleft", col = c("#984ea3", "#4daf4a"), lty = c(1, 2), lwd = 3,
-       legend = c("Piecewise Linear", "Loess Curve"), bty = "n")
+```
 
-#lines(x = age20to80, y = menRes.lo.pr, col = "green", lwd = 2)
-#legend("topleft", col = c("purple", "green"), lty = 1, lwd = 2,
-#       legend = c("Piecewise Linear", "Loess Curve"), bty = "n")
-dev.off()
-
-
-pdf("CB_NumRunnersLinePlot.pdf", width = 8, height = 6)
-oldPar = par(mar = c(4.1, 4.1, 1, 1))
-
+``` {r runner_composition, include=FALSE}
 numRunners = with(cbMen, tapply(runTime, year, length))
+# number of runners more than doubled from 1999 to 2012
 plot(numRunners ~ names(numRunners), type="l", lwd = 2,
      xlab = "Years", ylab = "Number of Runners")
-par(oldPar)
-dev.off()
 
+
+# look at summary stats from beginning and 2012
 summary(cbMenSub$runTime[cbMenSub$year == 1999])
-
 summary(cbMenSub$runTime[cbMenSub$year == 2012])
 
-pdf("CB_AgeDensity99vs12.pdf", width = 8, height = 6)
-oldPar = par(mar = c(4.1, 4.1, 1, 1))
 
 age1999 = cbMenSub[ cbMenSub$year == 1999, "age" ]
 age2012 = cbMenSub[ cbMenSub$year == 2012, "age" ]
 
+# plot density curves for ages in '99 and '12
 plot(density(age1999, na.rm = TRUE), 
      ylim = c(0, 0.05), col = "purple",
      lwd = 3,  xlab = "Age (years)",  main = "")
+
 lines(density(age2012, na.rm = TRUE), 
       lwd = 3, lty = 2, col="green")
+
 legend("topleft", col = c("purple", "green"), lty= 1:2, lwd = 3,
        legend = c("1999", "2012"), bty = "n")
 
-par(oldPar)
-dev.off()
-
+# both sets did not come from the same distribution, line is not straight
+# it's close but not exact
 qqplot(age1999, age2012, pch = 19, cex = 0.5, 
        ylim = c(10,90), xlim = c(10,90), 
        xlab = "Age in 1999 Race",
        ylab = "Age in 2012 Race", 
        main = "Quantile-quantile plot of male runner's age")
 abline(a =0, b = 1, col="red", lwd = 2)
+
+
 
 mR.lo99 = loess(runTime ~ age, cbMenSub[ cbMenSub$year == 1999,])
 mR.lo.pr99 = predict(mR.lo99, data.frame(age = age20to80))
@@ -998,13 +1022,13 @@ createDF = function(Res, year, sex)
   
   # Drop rows with no time
   Res = Res[ useTime != "", ]
-  if(sex=='W'){
-    
-    age = gsub("   ", "0  ", Res[,'ag'])
-    age = gsub("XX "," 0 ", age)
-    
-    Res[, 'ag'] = age
-  }
+  #if(sex=='W'){
+  #  
+  #  age = gsub("   ", "0  ", Res[,'ag'])
+  #  age = gsub("XX "," 0 ", age)
+  #  
+  #  Res[, 'ag'] = age
+  #}
   
   Results = data.frame(year = rep(year, nrow(Res)),
                        sex = rep(sex, nrow(Res)),
@@ -1019,7 +1043,7 @@ createDF = function(Res, year, sex)
 #menDF = mapply(createDF, menResMat, year = 1999:2012,
 #               sex = rep("M", 14), SIMPLIFY = FALSE)
 
-sapply(menDF, function(x) sum(is.na(x$runTime)))
+#sapply(menDF, function(x) sum(is.na(x$runTime)))
 
 # FIX 2006
 separatorIdx = grep("^===", menFiles[["2006"]])
