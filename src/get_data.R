@@ -9,7 +9,7 @@ extractResTable =
   # find the preformatted text,
   # and write lines or return as a character vector.
   #
-  function(url = "http://www.cherryblossom.org/results/2009/09cucb-F.htm",
+  function(url = "http://www.cherryblossom.org/results/2009/09cucb-M.htm",
            year = 1999, sex = "male", file = NULL)
   {
     doc = htmlParse(url)
@@ -35,7 +35,7 @@ extractResTable =
       div1 = getNodeSet(doc, "//div[@class='Section1']")
       pres = getNodeSet(div1[[1]], "//pre")
       els = sapply(pres, xmlValue)
-      els = gsub(intToUtf8(160),' ',els)
+      els = gsub(intToUtf8(160), intToUtf8(32), els)
     }
     
     else {
