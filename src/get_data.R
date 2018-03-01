@@ -35,6 +35,7 @@ extractResTable =
       div1 = getNodeSet(doc, "//div[@class='Section1']")
       pres = getNodeSet(div1[[1]], "//pre")
       els = sapply(pres, xmlValue)
+      els = gsub(intToUtf8(160),' ',els)
     }
     
     else {
