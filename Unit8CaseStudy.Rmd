@@ -232,6 +232,7 @@ age1999 = cbMenSub[ cbMenSub$year == 1999, "age" ]
 age2012 = cbMenSub[ cbMenSub$year == 2012, "age" ]
 
 # plot density curves for ages in '99 and '12
+# age distributions are definitely different
 plot(density(age1999, na.rm = TRUE), 
      ylim = c(0, 0.05), col = "purple",
      lwd = 3,  xlab = "Age (years)",  main = "")
@@ -252,54 +253,42 @@ qqplot(age1999, age2012, pch = 19, cex = 0.5,
 abline(a =0, b = 1, col="red", lwd = 2)
 
 
-
+# smooth curves (LOESS) for 99 and 12
 mR.lo99 = loess(runTime ~ age, cbMenSub[ cbMenSub$year == 1999,])
 mR.lo.pr99 = predict(mR.lo99, data.frame(age = age20to80))
 
 mR.lo12 = loess(runTime ~ age, cbMenSub[ cbMenSub$year == 2012,])
 mR.lo.pr12 = predict(mR.lo12, data.frame(age = age20to80))
 
-plot(mR.lo.pr99 ~ age20to80,
-     type = "l", col = "purple", lwd = 3,
-     xlab = "Age (years)", ylab = "Fitted Run Time (minutes)")
-   
-lines(x = age20to80, y = mR.lo.pr12,
-      col = "green", lty = 2, lwd = 3)
- 
-legend("topleft", col = c("purple", "green"), lty = 1:2, lwd = 3,
-       legend = c("1999", "2012"), bty = "n")
-
-
-pdf("CB_Loess99vs12.pdf", width = 8, height = 6)
-oldPar = par(mar = c(4.1, 4.1, 1, 1))
 
 plot(mR.lo.pr99 ~ age20to80,
      type = "l", col = "#984ea3", lwd = 3,
      xlab = "Age (years)", ylab = "Prediction (minutes)")  
 lines(x = age20to80, y = mR.lo.pr12, col="#4daf4a", lty = 2, lwd = 3) 
+
 legend("topleft", col = c("#984ea3", "#4daf4a"), lty = 1:2, lwd = 3,
        legend = c("1999", "2012"), bty = "n")
-par(oldPar)
-dev.off()
 
+
+# plot differences in curves, 2012 was slower in general
 gap14 = mR.lo.pr12 - mR.lo.pr99
-
-pdf("CB_DifferenceInFittedCurves.pdf", width = 8, height = 6)
-oldPar = par(mar = c(4.1, 4.1, 1, 1))
 
 plot(gap14 ~ age20to80, type = "l" , xlab = "Age (years)", 
      ylab = "Difference in Fitted Curves (minutes)", lwd = 2)
-par(oldPar)
-dev.off()
 
-fastestMan = tapply(menRes$time, menRes$age, min, na.rm = TRUE)
+# this is our assignment LOL - age grading
+fastestMan = tapply(cbMen$runTime, cbMen$age, min, na.rm = TRUE)
+# one outlier at 1.5 - Peter Hui, had different format
+# fix
+fastestMan[67] = 66.53
 plot(fastestMan ~ names(fastestMan), type ="l", xlim = c(20, 80))
 ageFM = as.numeric(names(fastestMan))
 mR.loF = loess(fastestMan ~ ageFM)
 mR.lo.prF = predict(mR.loF, data.frame(age = ageFM), se = FALSE)
 lines(x = ageFM, y = mR.lo.prF, col = "purple", lwd = 2)
 
-timeNorm = menRes$time / mR.lo.prF[as.character(menRes$age)]
+
+timeNorm =cbMen$runTime / mR.lo.prF[as.character(cbMen$age)]
 time99Norm = timeNorm[menRes$year == 1999]
 time12Norm = timeNorm[menRes$year == 2012]
 summary(time99Norm)
@@ -316,7 +305,9 @@ lines(density(100*time12Norm, na.rm = TRUE),
 legend("topleft", fill = c("purple", "green"),
        legend = c("1999", "2012"), bty = "n")
 
+```
 
+``` {r following_runners, include=FALSE}
 trimBlanks = function(charVector) {
   nameClean = gsub("^[[:blank:]]+", "", charVector)
   nameClean = gsub("[[:blank:]]+$", "", nameClean)
