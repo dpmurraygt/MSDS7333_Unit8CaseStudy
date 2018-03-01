@@ -86,7 +86,7 @@ createDF = function(Res, year, sex)
   
   age = gsub("X{2}\\s{1}?|\\s{3}?","0  ", Res[,'ag']) # authors' methods did not catch all blanks "   " for men 
                                                       # handle women's XX's and blanks
-                                                      # check out Ronald Henry from 2005
+                                                      # example: check out Ronald Henry from 2005
   Res[, 'ag'] = age
   
   Results = data.frame(year = rep(year, nrow(Res)),
