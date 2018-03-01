@@ -10,7 +10,7 @@ extractResTable =
   # and write lines or return as a character vector.
   #
   function(url = "http://www.cherryblossom.org/results/2009/09cucb-M.htm",
-           year = 1999, sex = "male", file = NULL)
+           year = 1999:2012, sex = "male", file = NULL)
   {
     doc = htmlParse(url)
     
