@@ -10,7 +10,7 @@ output:
 ---
 
 ```{r load_libs, echo=FALSE, include=FALSE}
-library(plyr)
+#library(plyr)
 library(dplyr)
 library(tidyr)
 library(ggplot2)
@@ -129,13 +129,13 @@ How do local runners compare to international and non local?
 
 ```{r fig.width=8.5, fig.height=4}
 AllFinishers %>% filter(GenderPlace==1) %>% mutate(year=as.factor(year)) %>%
-  ggplot(aes(x=year, y=runTime, group=sex, color=sex)) + geom_point() + theme_light() + scale_color_manual(values=c("#4286f4", "#fc41e9")) + theme(legend.position = "none")
+  ggplot(aes(x=year, y=runTime, group=sex, color=sex)) + geom_point() + theme_light() + scale_color_manual(values=c("#4286f4", "#fc41e9")) + theme(legend.position = "bottom")
 ```
 
 ```{r fig.width=8.5, fig.height=4}
 
 AllFinishers %>% filter(GenderPlace==1) %>% mutate(year=as.factor(year)) %>%
-  ggplot(aes(x=year, y=runTime, group=sex, color=sex)) + geom_point() + theme_light() + scale_color_manual(values=c("#4286f4", "#fc41e9")) + geom_facet(~AgeGroupLabels)
+  ggplot(aes(x=year, y=runTime, group=sex, color=sex)) + geom_point() + theme_light() + scale_color_manual(values=c("#4286f4", "#fc41e9")) + facet_grid(~AgeGroup) + theme(legend.position="bottom")
 
 
 ```
@@ -159,6 +159,12 @@ Nolan, Deborah; Lang, Duncan Temple. Data Science in R: A Case Studies Approach 
 ```{r fig.width=8.5, fig.height=4}
 AllFinishers %>%mutate(year=as.factor(year)) %>% ggplot(aes(x=age, color=sex)) + geom_histogram() + theme_light() + scale_fill_manual(values=c( "#fc41e9", "#4286f4")) + facet_grid(sex ~ year) + theme(legend.position = "none")
 
+```
+The fields have gotten larger overall.
+
+```{r fig.width=8.5, fig.height=4}
+AllFinishers %>%mutate(year=as.factor(year)) %>% ggplot(aes(x=age, color=year)) + geom_density() + theme_light()+ theme(legend.position = "bottom")
+#this needs a better color palette
 ```
 
 
