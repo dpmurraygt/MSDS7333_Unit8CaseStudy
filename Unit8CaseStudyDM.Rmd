@@ -16,6 +16,8 @@ library(tidyr)
 library(ggplot2)
 library(rvest)
 library(magrittr)
+library(scales)
+library(ggthemes)
 library(XML)
 ```
 
@@ -29,6 +31,8 @@ knitr::opts_chunk$set(echo = FALSE)
 ```{r make, include=FALSE, cache=TRUE}
 # get and clean data
 source("src/make.R")
+cbMen2 <- load(file="Data/cbMen.rda")
+cbWomen2 <-load("Data/cbWomen.rda")
 ```
 
 ## Abstract
@@ -54,62 +58,40 @@ source("src/make.R")
 
 
 ```{r}
-#condense this down to a data frame
-#we don't need a list of data frames, just give me a single data frame for everything and then we can filter as needed
-
-
-
-MenAll <- plyr::ldply(menDF, data.frame)
-WomenAll <- plyr::ldply(womenDF, data.frame)
-
-AllFinishers <- rbind(MenAll, WomenAll)
+#Combine men and women
+AllFinishers <- rbind(cbMen, cbWomen)
 
 #detach(package:plyr, unload=TRUE)
 
 #Engineer some new features
 #Overall Place, Gender Place, Age Group/Gender close
 
-AllFinishers <- AllFinishers %>% group_by(year)  %>% mutate(OverallPlace = rank(runTime, ties.method="first")) %>%
-  group_by(year, sex) %>% mutate(GenderPlace = rank(runTime, ties.method="first")) %>% data.frame()
+AgeGroupLabels <- c("Under 19", "20-24", "25-29", "30-34", "35-39", "40-44", "45-49", "50-54", "55-59", "60-64", "65-69", "70-79", "80 and up")
+AgeThresholds <- c(0, 19, 24, 29, 34, 39, 44, 49, 54, 59, 64, 69, 79, Inf)
+
+#AllFinishers <- AllFinishers %>% 
 
 ```
-
-
-
-
 US T&F Record in the 10 mile distance is held by Greg Meyer, age 27, in Washington DC in 1983.  The record time is 46:13.  If we find times much lower (say 5%) than the world record time, these are definitely errors.  I don't use Record time as the threshold as this may be a non-certified course where you can run faster than the record, but it doesn't "count."
 
+
 ```{r}
+
 RecordTime <- 46+(13/60)
 Threshold <- 0.95 * RecordTime
 
 PotentialErrors<- AllFinishers %>% filter(runTime < Threshold)
 
-#then remove it, and rerank everything
 
-AllFinishers <- AllFinishers %>% filter(runTime > Threshold) %>% group_by(year)  %>% mutate(OverallPlace = rank(runTime, ties.method="first")) %>%
-  group_by(year, sex) %>% mutate(GenderPlace = rank(runTime, ties.method="first")) %>% data.frame()
-
-
-```
-
-```{r}
-#add in the age groups used for the race
-AgeGroupLabels <- c("Under 19", "20-24", "25-29", "30-34", "35-39", "40-44", "45-49", "50-54", "55-59", "60-64", "65-69", "70-79", "80 and up")
-AgeThresholds <- c(0, 19, 24, 29, 34, 39, 44, 49, 54, 59, 64, 69, 79, Inf)
-
-AllFinishers <- AllFinishers %>% mutate(AgeGroup = cut(age, AgeThresholds, AgeGroupLabels))
+AllFinishers <- AllFinishers %>% mutate(AgeGroup = cut(age, AgeThresholds, AgeGroupLabels)) %>%
+  filter(runTime > Threshold) %>%
+  group_by(year)  %>% mutate(OverallPlace = rank(runTime, ties.method="first")) %>%
+  group_by(year, sex) %>% mutate(GenderPlace = rank(runTime, ties.method="first")) %>% 
+  group_by(year, sex, AgeGroup) %>%  mutate(AgeGroupPlace = rank(runTime, ties.method="first")) %>% data.frame()
 
 ```
 
 
-
-
-```{r}
-#viz it up
-#no base graphics here, make it look good in ggplot with good viz principles
-
-```
 
 
 ```{r fig.width=8.5, fig.height=4.5}
@@ -131,12 +113,17 @@ How do local runners compare to international and non local?
 AllFinishers %>% filter(GenderPlace==1) %>% mutate(year=as.factor(year)) %>%
   ggplot(aes(x=year, y=runTime, group=sex, color=sex)) + geom_point() + theme_light() + scale_color_manual(values=c("#4286f4", "#fc41e9")) + theme(legend.position = "bottom")
 ```
+```{r fig.width=8.5, fig.height=4}
+#What about Total Race Size?
+AllFinishers %>% group_by(year, sex) %>% summarise(RunnerCount = n()) %>% ggplot(aes(x=year, y=RunnerCount, color=sex)) + geom_line(size=1) + theme_light() + scale_color_manual(values=c("#4286f4", "#fc41e9")) + theme(legend.position = "bottom") + scale_y_continuous(labels=comma, "Total Runners")
+
+```
+
 
 ```{r fig.width=8.5, fig.height=4}
 
-AllFinishers %>% filter(GenderPlace==1) %>% mutate(year=as.factor(year)) %>%
-  ggplot(aes(x=year, y=runTime, group=sex, color=sex)) + geom_point() + theme_light() + scale_color_manual(values=c("#4286f4", "#fc41e9")) + facet_grid(~AgeGroup) + theme(legend.position="bottom")
-
+AllFinishers %>% filter(AgeGroupPlace==1) %>% mutate(year=as.factor(year)) %>% filter(age<=64 & age != 0) %>%
+  ggplot(aes(x=year, y=runTime, group=sex, color=sex)) + geom_point() + geom_line( ) + theme_light() + scale_color_manual(values=c("#4286f4", "#fc41e9")) + facet_wrap(~AgeGroup, ncol=5) + theme(legend.position="bottom") + scale_x_discrete(labels=c())
 
 ```
 
@@ -144,7 +131,8 @@ AllFinishers %>% filter(GenderPlace==1) %>% mutate(year=as.factor(year)) %>%
 
 ```{r}
 #loess implementation
-
+RunTimeModel <- loess(runTime ~ age, data=AllFinishers)
+summary(RunTimeModel)
 ```
 
 ```{r}
@@ -165,6 +153,34 @@ The fields have gotten larger overall.
 ```{r fig.width=8.5, fig.height=4}
 AllFinishers %>%mutate(year=as.factor(year)) %>% ggplot(aes(x=age, color=year)) + geom_density() + theme_light()+ theme(legend.position = "bottom")
 #this needs a better color palette
+```
+
+```{r fig.width=8.5, fig.height=4}
+AllFinishers %>%mutate(year=as.factor(year)) %>% ggplot(aes(x=year, y=age)) + geom_boxplot() + theme_light()+ theme(legend.position = "bottom") + facet_grid(~sex)
+#this needs a better color palette, or something.  It sucks
+```
+
+Q.11 Normalize each male runner’s time by the fastest time for the runner of the same age. To do this, find the fastest runner for each year of age from 20 to 80. The tapply() function may be helpful here. Smooth these times using loess(), and find the smoothed time using predict(). Use these smoothed times to normalize each run time. Use density plots, quantile–quantile plots, and summary statistics to compare the distribution of the age-normalized times for the runners in 1999 and 2012. What do you find? Repeat the process for the women. Compare the women in 1999 to the women in 2012 and to the men in 1999 and 2012.
+
+Nolan, Deborah; Lang, Duncan Temple. Data Science in R: A Case Studies Approach to Computational Reasoning and Problem Solving (Chapman & Hall/CRC The R Series) (Page 101). CRC Press. Kindle Edition. 
+
+```{r fig.height=4, fig.width=8.5}
+TopFinisher<-AllFinishers %>% group_by(age, sex, year) %>% mutate(BestInAgeTime = min(runTime), WorstInAgeGroup = max(runTime)) %>% mutate(NormalizedTime = (runTime-BestInAgeTime)/(WorstInAgeGroup-BestInAgeTime))
+
+BestTime<-AllFinishers %>% group_by(age, sex, year) %>% summarise(BestInAgeTime = min(runTime))
+
+
+TopFinisher %>% ggplot(aes(x=age, y=NormalizedTime, group=sex, color=sex)) + geom_point() + theme_light() + scale_color_manual(values=c( "#fc41e9", "#4286f4")) + facet_wrap(~sex)
+
+BestTime %>% ggplot(aes(x=age, y=BestInAgeTime, group=sex, color=sex)) + geom_point() + theme_light() + scale_color_manual(values=c("#4286f4", "#fc41e9")) + facet_wrap(~sex) + geom_smooth(method="loess") + theme(legend.position = "bottom") + ggtitle("Fastest Time by Age by Gender, 1999-2012")
+
+
+```
+
+```{r}
+MensFastest <- BestTime %>% filter()
+
+
 ```
 
 
