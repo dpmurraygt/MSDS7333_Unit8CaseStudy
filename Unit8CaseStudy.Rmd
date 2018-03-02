@@ -272,9 +272,17 @@ plot(gap14 ~ age20to80, type = "l" , xlab = "Age (years)",
 ``` {r case_analysis, include=FALSE}
 # EXTRA CREDIT
 # imputation with random forest missForest
-# replace ages < 5, 10M is for 13 and up, likely errors
+# replace ages < 10, 10M is for 13 and up, likely errors
+
+# impute instead of toss out, take different approach than authors
+
 cbMen <- cbMen %>% 
-          mutate(age, age=replace(age, age < 13, NA))
+          mutate(age, 
+                 age=replace(age, age <= 15, NA))
+
+cbMen <- cbMen %>% 
+          mutate(runTime, 
+                 runTime=replace(runTime, runTime <= 30, NA))
 
 # which did we null out?
 nulls <- which(is.na(cbMen$age))
@@ -288,36 +296,36 @@ cbMen[,c("sex","name","home")] <- apply(cbMen[,c("sex", "name", "home")],
 # prep for imputation, if we really wanted to get sexy here we 
 # could cut VAR on country, obvious indicator for runTime and age, tried this and countries are MESSY
 # dont have enough time to complete this extra task + that extra task 
-cbMen_imp <- cbMen[c("age","runTime", "year","sex")]
+cbMen_imp <- cbMen[,c("age","runTime", "year","sex")]
 
 # this doesnt matter unless we do agg analysis including women
-cbMen_imp <- cbMen_short %>% 
+cbMen_imp <- cbMen_imp %>% 
                   mutate(sex = ifelse(sex == "M", 1, 0 ))
 
 
-# RF (non parametric) impute
+# RF (non parametric) impute using random forest imputer
 imp_object <- missForest(cbMen_imp)
 
 # all numeric, small normalized RMSE
 imp_object$OOBerror 
 
+# get imputed features and round age predictions
 cbMen_imp <- imp_object$ximp
 cbMen_imp$age <- round(cbMen_imp$age)
 
-# imputed cbMen
+# imputed cbMen, column bind others to re-create full data set
 cbMen_imp <- cbind(cbMen[, c("sex","name","home")],
                    cbMen_imp[,-4] )
 
 
+# START ASSIGNMENT: NEED TO DO SAME FOR WOMEN
 # this is our assignment - age grading
 fastestMen = tapply(cbMen_imp$runTime, 
                     cbMen_imp$age,
                     min, 
                     na.rm = FALSE) # we imputed here instead
 
-# one outlier at 1.5 - Peter Hui, had different format, fix
-fastestMen[61] = 66.53
-plot(fastestMen ~ names(fastestMen), type ="l", xlim = c(10, 80))
+plot(fastestMen ~ names(fastestMen), type ="l", xlim = c(20, 80))
 # convert to numeric
 age_fastest_men = as.numeric(names(fastestMen))
 # smooth fastest times by fitting and predicting LOESS
@@ -326,11 +334,11 @@ mens_fast_lpred = predict(mens_fast_lfit, data.frame(age = age_fastest_men), se 
 lines(x = age_fastest_men, y = mens_fast_lpred, col = "purple", lwd = 2)
 
 
-timeNorm =cbMen$runTime / mR.lo.prF[as.character(cbMen$age)]
-time99Norm = timeNorm[menRes$year == 1999]
-time12Norm = timeNorm[menRes$year == 2012]
-summary(time99Norm)
+timeNorm =cbMen$runTime / mens_fast_lpred[as.character(cbMen$age)]
+time99Norm = timeNorm[cbMen$year == 1999]
+time12Norm = timeNorm[cbMen$year == 2012]
 
+summary(time99Norm)
 summary(time12Norm)
 
 plot(density(100*time99Norm, na.rm = TRUE), 
@@ -347,6 +355,11 @@ legend("topleft", fill = c("purple", "green"),
 
 
 ``` {r following_runners, include=FALSE}
+#this iterates over a character vector to eliminate beginning blanks, trailing blanks
+# and then replace > 1 middle blanks with a single blank
+
+cbMenSub <- cbMen
+
 trimBlanks = function(charVector) {
   nameClean = gsub("^[[:blank:]]+", "", charVector)
   nameClean = gsub("[[:blank:]]+$", "", nameClean)
