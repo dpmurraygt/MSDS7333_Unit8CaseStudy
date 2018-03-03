@@ -73,8 +73,7 @@ AllFinishers[,c("sex","name","home")] <- apply(AllFinishers[,c("sex", "name", "h
 
      
 # prep for imputation, if we really wanted to get sexy here we 
-# could cut VAR on country, obvious indicator for runTime and age, tried this and countries are MESSY
-# dont have enough time to complete this extra task + that extra task 
+# could cut VAR on country, obvious indicator for runTime and age
 AllFinishersImp <- AllFinishers[,c("age","runTime", "year","sex")]
 
 # this doesnt matter unless we do agg analysis including women
@@ -237,7 +236,6 @@ BestTimesW <- BestTimes[BestTimes$sex == "W",]
 ```
 
 ``` {r men_1999v2012}
-# MENS ANALYSIS START
 
 # use span of 0.5 instead of .75 to capture curvature better
 RunModelMen <- loess(fastest ~ age, data=BestTimesM, span=0.5)
@@ -451,7 +449,10 @@ AllPredicted <- rbind(data.frame(time = PredictedTimeW, sex="W",
 AllPredicted %>% ggplot(aes(x=age, y=time, group=sex, color=sex)) + 
   geom_line(size=1.1) + theme_light() + 
   scale_color_manual(values=c( "#fc41e9", "#4286f4")) + 
-  facet_wrap(~sex) + ggtitle("LOESS Predicted Run Times By Age By Gender") + scale_x_continuous("Age") + scale_y_continuous("Predicted Time in Minutes") + theme(legend.position = "bottom")
+  facet_wrap(~sex) + ggtitle("LOESS Predicted Run Times By Age By Gender") + 
+  scale_x_continuous("Age") + 
+  scale_y_continuous("Predicted Time in Minutes") + 
+  theme(legend.position = "bottom")
 
 ```
 
