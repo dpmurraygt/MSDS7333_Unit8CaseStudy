@@ -333,10 +333,14 @@ mens_fast_lfit = loess(fastestMen ~ age_fastest_men)
 mens_fast_lpred = predict(mens_fast_lfit, data.frame(age = age_fastest_men), se = FALSE)
 lines(x = age_fastest_men, y = mens_fast_lpred, col = "purple", lwd = 2)
 
+# normalize times - index on cbMen$age
+# ensure predictions match ages
+names(mens_fast_lpred) = age_fastest_men
+timeNorm = cbMen_imp$runTime / mens_fast_lpred[as.character(cbMen_imp$age)]
+time99Norm = timeNorm[cbMen_imp$year == 1999]
+time12Norm = timeNorm[cbMen_imp$year == 2012]
 
-timeNorm =cbMen$runTime / mens_fast_lpred[as.character(cbMen$age)]
-time99Norm = timeNorm[cbMen$year == 1999]
-time12Norm = timeNorm[cbMen$year == 2012]
+
 
 summary(time99Norm)
 summary(time12Norm)
@@ -360,34 +364,46 @@ legend("topleft", fill = c("purple", "green"),
 
 cbMenSub <- cbMen
 
+# clean name to start tracking
 trimBlanks = function(charVector) {
   nameClean = gsub("^[[:blank:]]+", "", charVector)
   nameClean = gsub("[[:blank:]]+$", "", nameClean)
   nameClean = gsub("[[:blank:]]+", " ", nameClean)
 }
 
+# clean up name
 nameClean = trimBlanks(cbMenSub$name)
 
 length(nameClean)
 
+# 43060 unique names, likely someone ran more than once (or we have a lot of the same names!)
 length(unique(nameClean))
 
+
+# cross tab name counts by nesting table()
 table(table(nameClean))
 
-head( sort(table(nameClean), decreasing = TRUE), 1)
+# Michael Smith is the most frequent name (30 times!)
+head(sort(table(nameClean), decreasing = TRUE), 1)
 
+# let's look into Mr. Smith a bit more
 mSmith = cbMenSub[nameClean == "Michael Smith", ]
 
 head(unique(mSmith$home))
 
+# clean up names a bit more
 nameClean = tolower(nameClean)
 
+# more Michael Smiths - 33
 head( sort(table(nameClean), decreasing = TRUE), 1)
 
+# get rid of extraneous commas and periods
 nameClean = gsub("[,.]", "", nameClean)
 
+# cross tab year and names
 tabNameYr = table(cbMenSub$year, nameClean)
 
+# 5 similar names in a single year
 max(tabNameYr)
 
 class(tabNameYr)
@@ -398,61 +414,82 @@ names(attributes(tabNameYr))
 
 dim(tabNameYr)
 
+# colnames are the names of runners
 head(colnames(tabNameYr), 3)
 
 which( tabNameYr == max(tabNameYr) )
 
+# find indices to get info on who shows up most for one year
 which( tabNameYr == max(tabNameYr), arr.ind = TRUE )
 
 indMax = which( tabNameYr == max(tabNameYr), arr.ind = TRUE )
+
+# Michael Brown most common name
 colnames(tabNameYr)[indMax[2]]
 
+# add cleaned version of name to DF
 cbMenSub$nameClean = nameClean
 
+
+# approximate a year of birth
 cbMenSub$yob = cbMenSub$year - cbMenSub$age
 
 # Fix home in a similar way
 homeClean = trimBlanks(tolower(cbMenSub$home))
 cbMenSub$homeClean = gsub("[,.]", "", homeClean)
 
+# lets use Michael Brown as an example
 vars = c("year", "homeClean", "nameClean", "yob",  "runTime")
-mb = which(nameClean == "michael brown")
-birthOrder = order(cbMenSub$yob[mb])
-cbMenSub[mb[birthOrder], vars]
+mb = which(nameClean == "michael brown") # get michael brown indices
+birthOrder = order(cbMenSub$yob[mb]) # get order of birth given MB indices
+cbMenSub[mb[birthOrder], vars] # filter df for michael brown based on birth order
 
+# try a first pass of a unique idb by concatenating name and DOB 
 cbMenSub$ID = paste(nameClean, cbMenSub$yob, sep = "_")
 
+# how many times do each id appear?
 races = tapply(cbMenSub$year, cbMenSub$ID, length)
 
 races8 = names(races)[which(races >= 8)]
 
+# get men with 8 or more races
 men8 = cbMenSub[ cbMenSub$ID %in% races8, ]
 
 orderByRunner = order(men8$ID, men8$year)
-men8 = men8[orderByRunner, ]
+men8 = men8[orderByRunner, ] # reorder DF based on indices just obtained
 
+# split up df by ID into a list of DFs
 men8L = split(men8, men8$ID)
 names(men8L) = races8
 
+# how many runners do we have at least 8 obs for?
 length(unique(men8$ID))
 
+
+# we can discard matches if performance varies too much year to year
+# there are A LOT of assumptions being made here
 gapTime = tapply(men8$runTime, men8$ID,
                  function(t) any(abs(diff(t)) > 20))
 
 gapTime = sapply(men8L, function(df) 
                           any(abs(diff(df$runTime)) > 20))
 
+# 49 runners with gaps of 20m
 sum(gapTime)
 
+# get dfs for two runners from list of 8 or more events for runners
 lapply(men8L[ gapTime ][1:2], function(df) df[, vars])
 
+# add state into unique ID
 homeLen = nchar(cbMenSub$homeClean)
 
 cbMenSub$state = substr(cbMenSub$homeClean, 
                         start = homeLen - 1, stop = homeLen)
 
+# set '06 to NA since no state
 cbMenSub$state[cbMenSub$year == 2006] = NA
 
+# reset id including state now
 cbMenSub$ID = paste(cbMenSub$nameClean, cbMenSub$yob, 
                     cbMenSub$state, sep = "_")
 
@@ -462,18 +499,23 @@ men8 = cbMenSub[ cbMenSub$ID %in% races8, ]
 orderByRunner = order(men8$ID, men8$year)
 men8 = men8[orderByRunner, ]
 
+# create list of DFs
 men8L = split(men8, men8$ID)
 names(men8L) = races8
 
 length(races8)
 
+```
+``` {r following_runners_analysis, include=FALSE}
+
+# set up plotting in a 3x3 grid
 groups = 1 + (1:length(men8L) %% 9)
 
 addRunners = function(listRunners, colors, numLty) 
 {
   numRunners = length(listRunners)
-  colIndx = 1 + (1:numRunners) %% length(colors)
-  ltys = rep(1:numLty, each = length(colors), length = numRunners)
+  colIndx = 1 + (1:numRunners) %% length(colors) # assign colors modulus
+  ltys = rep(1:numLty, each = length(colors), length = numRunners) # line types
 
   mapply(function(df, i) {      
            lines(df$runTime ~ df$age, 
@@ -483,16 +525,18 @@ addRunners = function(listRunners, colors, numLty)
 
 colors = c("#e41a1c", "#377eb8","#4daf4a", "#984ea3", 
            "#ff7f00", "#a65628")
-par(mfrow = c(3, 3), mar = c(2, 2, 1, 1))
+
+# create blank plot, to add lines for each group
 invisible(
   sapply(1:9, function(grpId){
     plot( x = 0, y = 0, type = "n",
           xlim = c(20, 80), ylim = c(50, 130),
           xlab = "Age (years)", ylab = "Run Time (minutes)")
      
-    addRunners(men8L[ groups == grpId ], colors, numLty = 6)
+    addRunners(men8L[ groups == grpId ], colors, numLty = 6) # add in plots
   }) )
 
+# fit linear model to each
 fitOne = function(oneRunner, addLine = FALSE, col = "grey") {
   lmOne = lm(runTime ~ age, data = oneRunner)
   if (addLine) 
@@ -506,7 +550,6 @@ fitOne = function(oneRunner, addLine = FALSE, col = "grey") {
   return(res)
 }
 
-par(mfrow = c(1, 1), mar = c(5, 4, 1, 1))
 
 plot( x = 0, y = 0, type = "n",
       xlim = c(20, 80), ylim = c(50, 130),
