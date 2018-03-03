@@ -393,8 +393,10 @@ plot(density(100*time99NormM, na.rm = TRUE),
      main = "Run Time Distribution for Male vs Female Runners
              Percentage of the Fastest Runner for a Given Age",
      cex.main = 0.8, cex.lab = 0.8, cex.axis = 0.8)
+
 lines(density(100*time99NormW, na.rm = TRUE), 
           lwd = 3, col = "green")
+
 legend("topleft", fill = c("purple", "green"),
        legend = c("1999M", "1999W"), bty = "n",
        cex = 0.8)
@@ -411,7 +413,7 @@ par(mfrow=c(1,1))
 t.test(time99NormM, time99NormW)
 
 
-# now for 2012
+# now for 2012 comparisons
 
 par(mfrow=c(2,1))
 plot(density(100*time12NormM, na.rm = TRUE), 
@@ -428,7 +430,6 @@ lines(density(100*time12NormW, na.rm = TRUE),
 legend("topleft", fill = c("purple", "green"),
        legend = c("2012M", "2012W"), bty = "n",
        cex = 0.8)
-
 
 qqplot(time12NormM, time12NormW, pch = 19, cex = 0.5, 
        xlab = "Age Normalized Time - Men",
