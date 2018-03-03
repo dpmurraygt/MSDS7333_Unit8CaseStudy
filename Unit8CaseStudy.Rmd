@@ -42,12 +42,77 @@ source("src/make.R")
 
 ## Results
 
-####Note to Cory: If you want to move all relevant code for imputing/filter/etc data to here - above my analysis - so that it flows into cbMen/cbWomen. I used these two dataframes and combined them to AllFinishers because I'm lazy and hate base R.  Dplyr or die.  
-
-```{r}
+####Note to Dennis: Added in imputation. Also added in normalized analysis. Should be ready
+#### to write up
+```{r imputation, include=FALSE, echo=FALSE}
+ages<- c(20:80)
 #Combine men and women.  One Dataframe to rule them all.
 AllFinishers <- rbind(cbMen, cbWomen)
 
+# did some google research here, these youngins are for real!!!
+# lets change age to <=5, 
+AllFinishers <- AllFinishers %>% 
+                mutate(age, 
+                 age=replace(age, age <= 5, NA))
+
+# only one runner < 30, but let's impute
+AllFinishers <- AllFinishers %>% 
+                mutate(runTime, 
+                 runTime=replace(runTime, runTime <= 30, NA))
+
+# shuffle
+AllFinishers <- AllFinishers[sample(nrow(AllFinishers)),]
+
+# which did we null out for age?
+nulls <- which(is.na(AllFinishers$age))
+
+# clean up whitespace just because it's obnoxious
+AllFinishers[,c("sex","name","home")] <- apply(AllFinishers[,c("sex", "name", "home")], 
+                                              2, 
+                                              trimws)
+
+     
+# prep for imputation, if we really wanted to get sexy here we 
+# could cut VAR on country, obvious indicator for runTime and age, tried this and countries are MESSY
+# dont have enough time to complete this extra task + that extra task 
+AllFinishersImp <- AllFinishers[,c("age","runTime", "year","sex")]
+
+# this doesnt matter unless we do agg analysis including women
+# call binary indicator to speed up imputation process a bit
+AllFinishersImp <- AllFinishersImp %>% 
+                   mutate(sex = ifelse(sex == "W", 1, 0 ))
+
+
+# non parametric impute using random forest imputer
+# reduce number of trees for time purposes, accuracy trade off not much diff
+set.seed(42)
+ImputeObject <- missForest(AllFinishersImp, 
+                            ntree = 50, 
+                            maxiter = 3, # set back to 3
+                            variablewise = FALSE,
+                            verbose = FALSE)
+
+# all numeric, small normalized RMSE
+ImputeObject$OOBerror 
+
+# get imputed features and round age predictions
+AllFinishersImp <- ImputeObject$ximp
+AllFinishersImp$age <- round(AllFinishersImp$age)
+
+# column bind other features not included in impute
+# to re-create full data set
+AllFinishers <- cbind(AllFinishers[, c("sex","name","home")],
+                      AllFinishersImp[,-4] )
+any(is.na(AllFinishers$age))
+
+# what does imputation look like for age?
+AllFinishersImp[which(is.na(AllFinishers$age)),]
+
+# ready to rock
+```
+
+
+```{r eda, include=FALSE, echo=FALSE}
 #detach(package:plyr, unload=TRUE)
 
 #Engineer some new features
@@ -62,19 +127,35 @@ AgeThresholds <- c(0, 19, 24, 29, 34, 39, 44, 49, 54, 59, 64, 69, 79, Inf)
 
 From 1999 to 2012 the overall size of the race grew, and in fact more than doubled in size.  
 
-```{r fig.width=8.5, fig.height=4}
+```{r eda2, include=TRUE, echo=FALSE, fig.width=8.5, fig.height=4}
 #What about Total Race Size?
-AllFinishers %>% group_by(year, sex) %>% summarise(RunnerCount = n()) %>% ggplot(aes(x=year, y=RunnerCount, color=sex)) + geom_line(size=1) + theme_light() + scale_color_manual(values=c("#4286f4", "#fc41e9")) + theme(legend.position = "bottom") + scale_y_continuous(labels=comma, "Total Runners") +ggtitle("")
+AllFinishers %>% 
+  group_by(year, sex) %>% 
+    summarise(RunnerCount = n()) %>% 
+      ggplot(aes(x=year, y=RunnerCount, color=sex)) + 
+      geom_line(size=1) + theme_light() + 
+      scale_color_manual(values=c("#4286f4", "#fc41e9")) + 
+      theme(legend.position = "bottom") + 
+      scale_y_continuous( "Total Runners") +ggtitle("")
 
-AllFinishers %>% group_by(year) %>% summarise(RunnerCount=n())
-
+AllFinishers %>% 
+  group_by(year) %>% 
+    summarise(RunnerCount=n())
 ```
 
 While participation by men and women both grew substantially, participation women played the greatest role in the expansion of the field.  Women's participation comprised a minority, 42% of runners, but by 2012 had exchanged positions with men at 57.5% of all participants.  
 
-```{r fig.width=8.5, fig.height=4}
+```{r eda3, include=TRUE, echo=FALSE, fig.width=8.5, fig.height=4}
 #Have participants ages changed signfiicantly?
-AllFinishers %>%  ggplot(aes(x=as.factor(year), y=age, color=sex)) + geom_boxplot() + theme_light() + scale_color_manual(values=c("#4286f4", "#fc41e9")) + theme(legend.position = "none") + scale_y_continuous(labels=comma, "Age") +ggtitle("") + scale_x_discrete("Year") + ggtitle("Distribution of Age for Runners, 1999-2012") + facet_wrap(~sex, ncol=1)
+AllFinishers %>%  
+  ggplot(aes(x=as.factor(year), y=age, color=sex)) + 
+  geom_boxplot() + theme_light() + 
+  scale_color_manual(values=c("#4286f4", "#fc41e9")) + 
+  theme(legend.position = "none") + 
+  scale_y_continuous("Age") +ggtitle("") + 
+  scale_x_discrete("Year") + 
+  ggtitle("Distribution of Age for Runners, 1999-2012") + 
+  facet_wrap(~sex, ncol=1)
 ```
 
 The age of male runners has declined since 1999, with an average age of 40.3 in 1999, declining to 37.8 in 2008, and stabilizing between 37 and 38 years of age since 2008.  The standard deviation of mens' ages has consistently been between 10 and 12 years.
@@ -83,69 +164,326 @@ Women participating in the race, however, have been consistently averaging betwe
 
 The finish time for the best male participant for this ten mile event have improved consistently from 2008 to 2012, with times approaching 45 minutes.  Womens' times have been more static, with the exception of a 4 year run of times from 2004 to 2007.  
 
-```{r fig.width=8.5, fig.height=4}
-AllFinishers %>% filter(GenderPlace==1) %>% mutate(year=as.factor(year)) %>%
-  ggplot(aes(x=year, y=runTime, group=sex, color=sex)) + geom_point() + geom_line() + theme_light() + scale_color_manual(values=c("#4286f4", "#fc41e9")) + theme(legend.position = "bottom") + scale_y_continuous("Time In Minutes") + ggtitle("Fastest Time By Race Year, by Gender")
+```{r eda4, include = TRUE, echo = FALSE, fig.width=8.5, fig.height=4}
+# needs GenderPlace
+AllFinishers %>% 
+  filter(GenderPlace==1) %>% 
+    mutate(year=as.factor(year)) %>%
+      ggplot(aes(x=year, y=runTime, group=sex, color=sex)) + 
+      geom_point() + geom_line() + theme_light() + 
+      scale_color_manual(values=c("#4286f4", "#fc41e9")) + 
+      theme(legend.position = "bottom") + 
+      scale_y_continuous("Time In Minutes") + 
+      ggtitle("Fastest Time By Race Year, by Gender")
 ```
 
 Examination of the race finish times by the age groups of the race, and by gender, show several general consistencies.  The first is the consistency in most age groups from year to year of the race.  Most age groups can be described as a "random walk" around some median race time, with the exception of the 20-24 year segment for men showing a consistent reduction of race finishing times year over year.  The Under 19 segment shows a high degree of variation in the winning runner's time.  Some degree of this variability might be explained by the number of participants in the segment - consistently less than 100 in each gender - as well as progression of these runners into the more elite 20-24 age group.  The two age divisions for ages 65 and over are omitted from the visualization.
 
-```{r fig.width =8.5, fig.height=4}
-AllFinishers %>% filter(AgeGroupPlace==1) %>% mutate(year=as.factor(year)) %>% filter(age<=64 & age != 0) %>%
-  ggplot(aes(x=year, y=runTime, group=sex, color=sex)) + geom_point() + geom_line( ) + theme_light() + scale_color_manual(values=c("#4286f4", "#fc41e9")) + facet_wrap(~AgeGroup, ncol=5) + theme(legend.position="bottom") + scale_x_discrete(labels=c())
+```{r eda5, include = TRUE, echo = FALSE, fig.width =8.5, fig.height=4}
+# needs AgeGroupPlace
+AllFinishers %>% 
+  filter(AgeGroupPlace==1) %>% 
+    mutate(year=as.factor(year)) %>% 
+      filter(age<=64 & age != 0) %>%
+        ggplot(aes(x=year, y=runTime, group=sex, color=sex)) + 
+        geom_point() + 
+        geom_line( ) + 
+        theme_light() + 
+        scale_color_manual(values=c("#4286f4", "#fc41e9")) + 
+        facet_wrap(~AgeGroup, ncol=5) + 
+        theme(legend.position="bottom") + 
+        scale_x_discrete(labels=c())
 ```
 Examination of this series of visualizations also allows an inference to the relationship of a runner's age to his finishing time that we will examine in greater detail.  The visualization includes the fastest running time for every age between 20 and 80, for each race between 1999 and 2012.  Excluding the youngest, and the oldest participants from our research, the running times seem to follow a pattern for men of peak performance in the early twenties, with steadily increasing times for the rest of life, and more steeply increasing times and slower performances from age 60 to 80.  Women seem to peak closer to thirty, with times slowing through their thirties and fourties and experiencing an earlier degradation in performance and a steepening curve through their fifties and beyond.
 
-```{r fig.height=4, fig.width=8.5}
-TopFinisher<-AllFinishers %>% group_by(age, sex, year) %>% mutate(BestInAgeTime = min(runTime), WorstInAgeGroup = max(runTime)) 
+```{r eda6, include = TRUE, echo = FALSE, fig.height=4, fig.width=8.5}
+TopFinisher <- AllFinishers %>% 
+                group_by(age, sex, year) %>% 
+                  mutate(BestInAgeTime = min(runTime), WorstInAgeGroup = max(runTime)) 
 
-BestTime<-AllFinishers %>% group_by(age, sex, year) %>% summarise(BestInAgeTime = min(runTime))
+BestTimeYr <- AllFinishers %>% 
+                group_by(age, sex, year) %>% 
+                  summarise(BestInAgeTime = min(runTime))
 
-BestTime %>% ggplot(aes(x=age, y=BestInAgeTime, group=sex, color=sex)) + geom_point(alpha=0.3) + theme_light() + scale_color_manual(values=c("#4286f4", "#fc41e9")) + facet_wrap(~sex) + geom_smooth(method="loess") + theme(legend.position = "bottom") + ggtitle("Fastest Time by Age by Gender, 1999-2012") + scale_x_continuous(limits=c(20,80)) + scale_y_continuous("Best Performance by Age, 1999-2012")
+BestTimeYr %>% 
+  ggplot(aes(x=age, y=BestInAgeTime, group=sex, color=sex)) + 
+  geom_point(alpha=0.3) + 
+  theme_light() + 
+  scale_color_manual(values=c("#4286f4", "#fc41e9")) + 
+  facet_wrap(~sex) + geom_smooth(method="loess") + 
+  theme(legend.position = "bottom") + 
+  ggtitle("Fastest Time by Age by Gender, 1999-2012") + 
+  scale_x_continuous(limits=c(20,80)) + 
+  scale_y_continuous("Best Performance by Age, 1999-2012")
+```
 
+``` {r LOESS_analysis_setup}
+
+# add in un-normalized best times
+#AllFinishers <- AllFinishers %>% 
+#                    group_by(age, sex) %>% 
+#                     mutate(BestInAgeTime = min(runTime)) 
+
+# split base datasets for gender analysis purposes
+AllFinishersM <- AllFinishers[AllFinishers$sex == "M",]
+AllFinishersW <- AllFinishers[AllFinishers$sex == "W",]
+
+# get best times for both men and women to use in LOESS smoothing
+BestTimes <- AllFinishers[,c("sex","age", "runTime")] %>%
+             summarise(fastest=min(runTime))
+
+BestTimesM <- BestTimes[BestTimes$sex == "M",]
+BestTimesW <- BestTimes[BestTimes$sex == "W",]
+```
+
+``` {r men_1999v2012}
+# MENS ANALYSIS START
+
+# use span of 0.5 instead of .75 to capture curvature better
+RunModelMen <- loess(fastest ~ age, data=BestTimesM, span=0.5)
+# smooth times out, returns vector of times for each age, use all ages
+PredictedTimeM <- predict(RunModelMen, newdata = BestTimesM$age)
+
+
+# plot fastest times by age - leaving all ages in right now
+plot(BestTimesM$fastest ~ BestTimesM$age, type ="l", xlim = c(20, 80))
+# smooth out fastest times
+lines(x = BestTimesM$age, y = PredictedTimeM, col = "purple", lwd = 2)
+
+# normalize all times based on fastest time predictions per instructions
+names(PredictedTimeM) = BestTimesM$age
+timeNormM = AllFinishersM$runTime / PredictedTimeM[as.character(AllFinishersM$age)]
+
+# pull out two years we are interested in for the men
+time99NormM = timeNormM[AllFinishersM$year == 1999]
+time12NormM = timeNormM[AllFinishersM$year == 2012]
+
+# 1999 age normalized times faster across all quartiles
+summary(time99NormM)
+summary(time12NormM)
+
+# Visualize Men for 1999 v 2012
+# feel free to change these vizzes up
+
+# density plot called for in assignment
+# this plots the normalized time percentages (e.g. 1.4 * 100 = 140)
+# for better understanding (e.g. men in 1999 are ~160% of world record time for
+# all age groups)
+par(mfrow=c(2,1))
+plot(density(100*time99NormM, na.rm = TRUE), 
+    # ylim = c(0, 0.05), 
+     col = "purple",
+     lwd = 3,  xlab = "Time (percentage)",
+     main = "Time Distribution for Male Runners
+            Percentage of the Fastest Runner for a Given Age",
+     cex.main = 0.8, cex.lab = 0.8, cex.axis = 0.8)
+
+lines(density(100*time12NormM, na.rm = TRUE), 
+          lwd = 3, col = "green")
+
+legend("topleft", fill = c("purple", "green"),
+       legend = c("1999", "2012"), bty = "n", cex=0.8)
+
+# 2012 age controlled times are definitely slower, 
+# runners generally ran slower for their age grps
+
+# check QQ plot for 1999 vs 2012 Men
+qqplot(time99NormM, time12NormM, pch = 19, cex = 0.5, 
+       xlab = "Age Normalized Time - 1999",
+       ylab = "Age Normalized Time - 2012", 
+       main = "QQ Plot: Run Time Normalized Performance for Men",
+       cex.main = 0.8, cex.lab = 0.8, cex.axis = 0.8)
+abline(a =0, b = 1, col="red", lwd = 2)
+par(mfrow=c(1,1))
+
+# mode of distributions for 1999 peak earlier than 2012
+# also tighter spread of times, indicates 1999 faster when
+# considering age based times
+# qq plot shows distributions are not normal, pull toward 2012
+# indicating higher times in 2012 based on age
+
+# distributions roughly normal for men, ok for t test
+hist(time99NormM)
+hist(time12NormM)
+
+# t test show sig difference with 1999 being faster when accounting for age
+t.test(time99NormM, time12NormM)
 
 ```
-```{r fig.width=8.5, fig.height=4}
-ages<- c(20:80)
 
-MensTimes <- BestTime %>% filter(sex=="M")
+``` {r women_1999v2012}
 
-RunModelMen <- loess(BestInAgeTime ~ age, data=MensTimes)
+# use span of 0.5 instead of .75 to capture curvature better
+RunModelWomen <- loess(fastest ~ age, data=BestTimesW, span=0.5)
+# smooth times out, returns vector of times for each age
+PredictedTimeW <- predict(RunModelWomen, newdata = BestTimesW$age)
+
+# plot fastest times by age - leaving all ages in right now
+# big spike in later ages
+plot(BestTimesW$fastest ~ BestTimesW$age, type ="l", xlim = c(20, 80))
+# smooth out fastest times
+lines(x = BestTimesW$age, y = PredictedTimeW, col = "purple", lwd = 2)
+
+# normalize all times based on fastest time predictions per instructions
+names(PredictedTimeW) = BestTimesW$age
+timeNormW = AllFinishersW$runTime / PredictedTimeW[as.character(AllFinishersW$age)]
+
+# pull out two times we are interested in for the women
+time99NormW = timeNormW[AllFinishersW$year == 1999]
+time12NormW = timeNormW[AllFinishersW$year == 2012]
+
+# relatively similar, with slightly faster times in general in 99
+# especially when considering slower age based times, large gap in 3Q
+# more extreme slow times in 2012
+summary(time99NormW)
+summary(time12NormW)
+
+# feel free to change these vizzes up
+
+par(mfrow=c(2,1))
+plot(density(100*time99NormW, na.rm = TRUE), 
+    # ylim = c(0, 0.05), 
+     col = "purple",
+     lwd = 3,  xlab = "Time (percentage)",
+     main = "Time Distribution for Women
+            Percentage of the Fastest Runner for a Given Age",
+     cex.main = 0.8, cex.lab = 0.8, cex.axis = 0.8)
+
+lines(density(100*time12NormW, na.rm = TRUE), 
+          lwd = 3, col = "green")
+
+legend("topleft", fill = c("purple", "green"),
+       legend = c("1999", "2012"), bty = "n",
+       cex= 0.8)
+
+qqplot(time99NormW, time12NormW, pch = 19, cex = 0.5, 
+       xlab = "Age Normalized Time - 1999",
+       ylab = "Age Normalized Time - 2012", 
+       main = "QQ Plot: Age Normalized Run Time for Women",
+       cex.main = 0.8, cex.lab = 0.8, cex.axis = 0.8)
+abline(a =0, b = 1, col="red", lwd = 2)
+par(mfrow=c(1,1))
+
+# women's times are quite similar comparing two years, 
+# however can see some pull for 2012 indicating slightly
+# slower age controlled times, esp in 2012, indicated by the longer
+# right tail in the density plot
+# qq plot shows distributions are not normal, pull toward 2012
+# indicating higher times in 2012 based on age
+
+# distributions roughly normal
+hist(time99NormW)
+hist(time12NormW)
+
+# t test show sig difference with 1999 being faster when accounting for age
+t.test(time99NormW, time12NormW)
+```
+
+``` {r womenvmen_1999v2012}
+# COMPARE BOTH GENDERS
+
+# Party like it's 1999 - compare normalized times between genders
+# again, change these visualizations up if desired
+
+par(mfrow=c(2,1))
+plot(density(100*time99NormM, na.rm = TRUE), 
+     ylim = c(0, 0.02), 
+     col = "purple",
+     lwd = 3,  xlab = "Time (percentage)",
+     main = "Run Time Distribution for Male vs Female Runners
+             Percentage of the Fastest Runner for a Given Age",
+     cex.main = 0.8, cex.lab = 0.8, cex.axis = 0.8)
+lines(density(100*time99NormW, na.rm = TRUE), 
+          lwd = 3, col = "green")
+legend("topleft", fill = c("purple", "green"),
+       legend = c("1999M", "1999W"), bty = "n",
+       cex = 0.8)
+
+qqplot(time99NormM, time99NormW, pch = 19, cex = 0.5, 
+       xlab = "Age Normalized Time - Men",
+       ylab = "Age Normalized Time - Women", 
+       main = "QQ Plot 1999: Men vs Women Normalized Times",
+       cex.main = 0.8, cex.lab = 0.8, cex.axis = 0.8)
+abline(a =0, b = 1, col="red", lwd = 2)
+par(mfrow=c(1,1))
+
+# men age controlled outperform women in 99
+t.test(time99NormM, time99NormW)
 
 
-PredictedTime <- predict(RunModelMen, newdata = ages)
-PredictionsMen <- data.frame(ages, PredictedTime, as.character("M"))
-colnames(PredictionsMen) <- c("age", "PredictedTime", "sex")
+# now for 2012
 
-ages<- c(20:80)
+par(mfrow=c(2,1))
+plot(density(100*time12NormM, na.rm = TRUE), 
+     ylim = c(0, 0.02), 
+     col = "purple",
+     lwd = 3, 
+     xlab = "Time (percentage)",
+     main = "Run Time Distribution for Male vs Female Runners
+             Percentage of the Fastest Runner for a Given Age",
+     cex.main = 0.8, cex.lab = 0.8, cex.axis = 0.8)
 
-WomensTimes <- BestTime %>% filter(sex=="W")
+lines(density(100*time12NormW, na.rm = TRUE), 
+          lwd = 3, col = "green")
+legend("topleft", fill = c("purple", "green"),
+       legend = c("2012M", "2012W"), bty = "n",
+       cex = 0.8)
 
-RunModelWomen <- loess(BestInAgeTime ~ age, data=WomensTimes)
+
+qqplot(time12NormM, time12NormW, pch = 19, cex = 0.5, 
+       xlab = "Age Normalized Time - Men",
+       ylab = "Age Normalized Time - Women", 
+       main = "QQ Plot 2012: Men vs Women Normalized Times",
+       cex.main = 0.8, cex.lab = 0.8, cex.axis = 0.8)
+abline(a =0, b = 1, col="red", lwd = 2)
+
+# much closer for 12, but men slightly outperform
+t.test(time12NormM, time12NormW)
 
 
-PredictedTimeWomens <- predict(RunModelWomen, newdata = ages)
-PredictionsWomen <- data.frame(ages, PredictedTimeWomens, as.character("W"))
-colnames(PredictionsWomen) <- c("age", "PredictedTime", "sex")
+# reset All_Predicted based on new analysis methods above
+AllPredicted <- rbind(data.frame(time = PredictedTimeW, sex="W", 
+                                 age=as.numeric(names(PredictedTimeW))),  
+                      data.frame(time=PredictedTimeM, sex="M", 
+                                 age=as.numeric(names(PredictedTimeM))))
 
-AllPredicted <- rbind(PredictionsWomen, PredictionsMen)
-
-AllPredicted %>% ggplot(aes(x=age, y=PredictedTime, group=sex, color=sex)) + 
+AllPredicted %>% ggplot(aes(x=age, y=time, group=sex, color=sex)) + 
   geom_line(size=1.1) + theme_light() + 
   scale_color_manual(values=c( "#fc41e9", "#4286f4")) + 
   facet_wrap(~sex) + ggtitle("LOESS Predicted Run Times By Age By Gender") + scale_x_continuous("Age") + scale_y_continuous("Predicted Time in Minutes") + theme(legend.position = "bottom")
 
 ```
 
-```{r fig.width=8.5, fig.height=6}
+``` {r dennis_analysis}
+# commented taken care of above
+#PredictionsMen <- data.frame(ages, PredictedTime, as.character("M"))
+#colnames(PredictionsMen) <- c("age", "PredictedTime", "sex")
 
-FinishersWithPredicted <- inner_join(AllFinishers, AllPredicted, by=c("age", "sex")) %>% mutate(NormalizedTime = (runTime-PredictedTime)/(PredictedTime))
+#ages<- c(20:80)
 
-FinishersWithPredicted %>% filter(year %in% c(1999, 2012)) %>% ggplot(aes(x=age, NormalizedTime, color=sex, group=sex)) + geom_point(alpha=0.15) + theme_light() + facet_grid(sex~year) + scale_color_manual(values=c("#4286f4", "#fc41e9")) + theme(legend.position = "bottom") + scale_y_continuous("Time Normalized to Predicted Fastest Time")
+#WomensTimes <- BestTime %>% filter(sex=="W")
 
+#RunModelWomen <- loess(BestInAgeTime ~ age, data=WomensTimes)
 
+#PredictedTimeWomens <- predict(RunModelWomen, newdata = ages)
+#PredictionsWomen <- data.frame(ages, PredictedTimeWomens, as.character("W"))
+#colnames(PredictionsWomen) <- c("age", "PredictedTime", "sex")
+
+# fixed up this piece to work with above
+# use normalization method from source
+FinishersWithPredicted <- inner_join(AllFinishers, AllPredicted, by=c("age", "sex")) %>%    
+                             mutate(NormalizedTime = runTime/time)
+
+FinishersWithPredicted %>% 
+  filter(year %in% c(1999, 2012)) %>% 
+   ggplot(aes(x=age, NormalizedTime, color=sex, group=sex)) + 
+   geom_point(alpha=0.15) + theme_light() + facet_grid(sex~year) +                               
+   scale_color_manual(values=c("#4286f4", "#fc41e9")) + 
+   theme(legend.position = "bottom") + 
+   scale_y_continuous("Time Normalized to Predicted Fastest Time")
 
 ```
+
 
 ## Future Work and Conclusions
 Application of predictive timing in running and other endurance sports holds numerous applications.
@@ -484,7 +822,7 @@ time12Norm_m = timeNorm_m[cbMen_imp$year == 2012]
 summary(time99Norm_m)
 summary(time12Norm_m)
 
-
+t.test()
 
 par(mfrow=c(1,2))
 plot(density(100*time99Norm_m, na.rm = TRUE), 
@@ -555,47 +893,13 @@ qqplot(time99Norm_w, time12Norm_w, pch = 19, cex = 0.5,
        xlab = "Age Normalized Time in 1999 Race",
        ylab = "Age Normalized Time in 2012 Race", 
        main = "Quantile-quantile plot of female runner's performance")
-abline(a =0, b = 1, col="red", lwd = 2)
+abline(a = 0, b = 1, col="red", lwd = 2)
+
+
+# COMPARE BOTH GENDERS
 
 
 
-plot(density(100*time99Norm_m, na.rm = TRUE), 
-    # ylim = c(0, 0.05), 
-     col = "purple", ylim=c(0,0.05),
-     lwd = 3,  xlab = "Time (percentage)",
-     main = "Time Distribution for 1999 and 2012 Runners\n Percentage of the fastest runner for that age")
-lines(density(100*time99Norm_w, na.rm = TRUE), 
-          lwd = 3, col = "green")
-legend("topleft", fill = c("purple", "green"),
-       legend = c("1999M", "1999W"), bty = "n")
-
-
-qqplot(time99Norm_m, time99Norm_w, pch = 19, cex = 0.5, 
-       xlab = "Age Normalized Time in 1999 Race for Men",
-       ylab = "Age Normalized Time in 1999 Race for Women", 
-       main = "Quantile-quantile plot of female runner's performance")
-abline(a =0, b = 1, col="red", lwd = 2)
-
-
-
-plot(density(100*time12Norm_m, na.rm = TRUE), 
-     ylim = c(0, 0.02), 
-     col = "purple",
-     lwd = 3,  xlab = "Time (percentage)",
-     main = "Time Distribution for 2012 Runners Age Normalized Results \n Men v Women")
-lines(density(100*time12Norm_w, na.rm = TRUE), 
-          lwd = 3, col = "green")
-legend("topleft", fill = c("purple", "green"),
-       legend = c("2012M", "2012W"), bty = "n")
-
-
-qqplot(time12Norm_m, time12Norm_w, pch = 19, cex = 0.5, 
-       xlab = "Age Normalized Time in 2012 Race for Men",
-       ylab = "Age Normalized Time in 2012 Race for Women", 
-       main = "Quantile-quantile plot of female runner's performance")
-abline(a =0, b = 1, col="red", lwd = 2)
-
-t.test(time12Norm_m, time12Norm_w)
 
 ```
 
