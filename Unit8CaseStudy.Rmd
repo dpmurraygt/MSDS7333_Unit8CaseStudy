@@ -42,7 +42,119 @@ source("src/make.R")
 
 ## Results
 
+####Note to Cory: If you want to move all relevant code for imputing/filter/etc data to here - above my analysis - so that it flows into cbMen/cbWomen. I used these two dataframes and combined them to AllFinishers because I'm lazy and hate base R.  Dplyr or die.  
+
+```{r}
+#Combine men and women.  One Dataframe to rule them all.
+AllFinishers <- rbind(cbMen, cbWomen)
+
+#detach(package:plyr, unload=TRUE)
+
+#Engineer some new features
+#Overall Place, Gender Place, Age Group/Gender close
+
+AgeGroupLabels <- c("Under 19", "20-24", "25-29", "30-34", "35-39", "40-44", "45-49", "50-54", "55-59", "60-64", "65-69", "70-79", "80 and up")
+AgeThresholds <- c(0, 19, 24, 29, 34, 39, 44, 49, 54, 59, 64, 69, 79, Inf)
+
+#AllFinishers <- AllFinishers %>% 
+
+```
+
+From 1999 to 2012 the overall size of the race grew, and in fact more than doubled in size.  
+
+```{r fig.width=8.5, fig.height=4}
+#What about Total Race Size?
+AllFinishers %>% group_by(year, sex) %>% summarise(RunnerCount = n()) %>% ggplot(aes(x=year, y=RunnerCount, color=sex)) + geom_line(size=1) + theme_light() + scale_color_manual(values=c("#4286f4", "#fc41e9")) + theme(legend.position = "bottom") + scale_y_continuous(labels=comma, "Total Runners") +ggtitle("")
+
+AllFinishers %>% group_by(year) %>% summarise(RunnerCount=n())
+
+```
+
+While participation by men and women both grew substantially, participation women played the greatest role in the expansion of the field.  Women's participation comprised a minority, 42% of runners, but by 2012 had exchanged positions with men at 57.5% of all participants.  
+
+```{r fig.width=8.5, fig.height=4}
+#Have participants ages changed signfiicantly?
+AllFinishers %>%  ggplot(aes(x=as.factor(year), y=age, color=sex)) + geom_boxplot() + theme_light() + scale_color_manual(values=c("#4286f4", "#fc41e9")) + theme(legend.position = "none") + scale_y_continuous(labels=comma, "Age") +ggtitle("") + scale_x_discrete("Year") + ggtitle("Distribution of Age for Runners, 1999-2012") + facet_wrap(~sex, ncol=1)
+```
+
+The age of male runners has declined since 1999, with an average age of 40.3 in 1999, declining to 37.8 in 2008, and stabilizing between 37 and 38 years of age since 2008.  The standard deviation of mens' ages has consistently been between 10 and 12 years.
+
+Women participating in the race, however, have been consistently averaging between an average of 33 and 36 years old, without any consistent trend year over year. Standard deviation of age for women is about 9 years.
+
+The finish time for the best male participant for this ten mile event have improved consistently from 2008 to 2012, with times approaching 45 minutes.  Womens' times have been more static, with the exception of a 4 year run of times from 2004 to 2007.  
+
+```{r fig.width=8.5, fig.height=4}
+AllFinishers %>% filter(GenderPlace==1) %>% mutate(year=as.factor(year)) %>%
+  ggplot(aes(x=year, y=runTime, group=sex, color=sex)) + geom_point() + geom_line() + theme_light() + scale_color_manual(values=c("#4286f4", "#fc41e9")) + theme(legend.position = "bottom") + scale_y_continuous("Time In Minutes") + ggtitle("Fastest Time By Race Year, by Gender")
+```
+
+Examination of the race finish times by the age groups of the race, and by gender, show several general consistencies.  The first is the consistency in most age groups from year to year of the race.  Most age groups can be described as a "random walk" around some median race time, with the exception of the 20-24 year segment for men showing a consistent reduction of race finishing times year over year.  The Under 19 segment shows a high degree of variation in the winning runner's time.  Some degree of this variability might be explained by the number of participants in the segment - consistently less than 100 in each gender - as well as progression of these runners into the more elite 20-24 age group.  The two age divisions for ages 65 and over are omitted from the visualization.
+
+```{r fig.width =8.5, fig.height=4}
+AllFinishers %>% filter(AgeGroupPlace==1) %>% mutate(year=as.factor(year)) %>% filter(age<=64 & age != 0) %>%
+  ggplot(aes(x=year, y=runTime, group=sex, color=sex)) + geom_point() + geom_line( ) + theme_light() + scale_color_manual(values=c("#4286f4", "#fc41e9")) + facet_wrap(~AgeGroup, ncol=5) + theme(legend.position="bottom") + scale_x_discrete(labels=c())
+```
+Examination of this series of visualizations also allows an inference to the relationship of a runner's age to his finishing time that we will examine in greater detail.  The visualization includes the fastest running time for every age between 20 and 80, for each race between 1999 and 2012.  Excluding the youngest, and the oldest participants from our research, the running times seem to follow a pattern for men of peak performance in the early twenties, with steadily increasing times for the rest of life, and more steeply increasing times and slower performances from age 60 to 80.  Women seem to peak closer to thirty, with times slowing through their thirties and fourties and experiencing an earlier degradation in performance and a steepening curve through their fifties and beyond.
+
+```{r fig.height=4, fig.width=8.5}
+TopFinisher<-AllFinishers %>% group_by(age, sex, year) %>% mutate(BestInAgeTime = min(runTime), WorstInAgeGroup = max(runTime)) 
+
+BestTime<-AllFinishers %>% group_by(age, sex, year) %>% summarise(BestInAgeTime = min(runTime))
+
+BestTime %>% ggplot(aes(x=age, y=BestInAgeTime, group=sex, color=sex)) + geom_point(alpha=0.3) + theme_light() + scale_color_manual(values=c("#4286f4", "#fc41e9")) + facet_wrap(~sex) + geom_smooth(method="loess") + theme(legend.position = "bottom") + ggtitle("Fastest Time by Age by Gender, 1999-2012") + scale_x_continuous(limits=c(20,80)) + scale_y_continuous("Best Performance by Age, 1999-2012")
+
+
+```
+```{r fig.width=8.5, fig.height=4}
+ages<- c(20:80)
+
+MensTimes <- BestTime %>% filter(sex=="M")
+
+RunModelMen <- loess(BestInAgeTime ~ age, data=MensTimes)
+
+
+PredictedTime <- predict(RunModelMen, newdata = ages)
+PredictionsMen <- data.frame(ages, PredictedTime, as.character("M"))
+colnames(PredictionsMen) <- c("age", "PredictedTime", "sex")
+
+ages<- c(20:80)
+
+WomensTimes <- BestTime %>% filter(sex=="W")
+
+RunModelWomen <- loess(BestInAgeTime ~ age, data=WomensTimes)
+
+
+PredictedTimeWomens <- predict(RunModelWomen, newdata = ages)
+PredictionsWomen <- data.frame(ages, PredictedTimeWomens, as.character("W"))
+colnames(PredictionsWomen) <- c("age", "PredictedTime", "sex")
+
+AllPredicted <- rbind(PredictionsWomen, PredictionsMen)
+
+AllPredicted %>% ggplot(aes(x=age, y=PredictedTime, group=sex, color=sex)) + 
+  geom_line(size=1.1) + theme_light() + 
+  scale_color_manual(values=c( "#fc41e9", "#4286f4")) + 
+  facet_wrap(~sex) + ggtitle("LOESS Predicted Run Times By Age By Gender") + scale_x_continuous("Age") + scale_y_continuous("Predicted Time in Minutes") + theme(legend.position = "bottom")
+
+```
+
+```{r fig.width=8.5, fig.height=6}
+
+FinishersWithPredicted <- inner_join(AllFinishers, AllPredicted, by=c("age", "sex")) %>% mutate(NormalizedTime = (runTime-PredictedTime)/(PredictedTime))
+
+FinishersWithPredicted %>% filter(year %in% c(1999, 2012)) %>% ggplot(aes(x=age, NormalizedTime, color=sex, group=sex)) + geom_point(alpha=0.15) + theme_light() + facet_grid(sex~year) + scale_color_manual(values=c("#4286f4", "#fc41e9")) + theme(legend.position = "bottom") + scale_y_continuous("Time Normalized to Predicted Fastest Time")
+
+
+
+```
+
 ## Future Work and Conclusions
+Application of predictive timing in running and other endurance sports holds numerous applications.
+
+The running community holds the integrity of their sport in highest regard.  This has spurred a cottage industry of people who attempt to expose persons who may be taking unethical steps to improve their race times.  This varies from persons not following the selected course (either via a cut through or non-foot transportation), as well as people using surrogates carrying their bib to help qualify for prestigious races like the Boston Marathon.  Much of this research has been powered via the published results on race websites, as well as aggregator active.com.  The researchers have largely looked for suspicious results on a one-by-one basis, but a loess-based model based on age using multiple years results could lend new insight to questionable results.
+
+Likewise, Race Organizers could benefit from deeper insight into their event for practical purposes.  Race organizers must first schedule road closures with municipal authorities to ensure a safe course for participants.  Understanding the age distribution, and the predicted finish times for their participants, might reduce the chances that a runner is not allowed to finish the race due to slow running times.  Additionally, race logistics like start waves are also dependent on expectation of the time required for a specific runner to finish the race.  While in most large races this is done on a seeding based n prior finishing times for the same distance, or expected finishing time based on other distances - unknown runners could be added to other groups based on a calculated race finishing time based on age.
+
+Fitness devices, and smart phone applications for fitness have become a standard for recreational runners.  
 
 ## References
 
@@ -712,25 +824,6 @@ dev.off()
 ```
 
 
-```{r}
-#scrape some data
-#Really long url of a JSON of race results for 2017:
-"http://results.xacte.com/json/search?eventId=1410&callback=jQuery183009502051809510115_1519067795323&sEcho=1&iColumns=13&sColumns=&iDisplayStart=0&iDisplayLength=10&mDataProp_0=&mDataProp_1=bib&mDataProp_2=firstname&mDataProp_3=lastname&mDataProp_4=sex&mDataProp_5=age&mDataProp_6=city&mDataProp_7=state&mDataProp_8=country&mDataProp_9=&mDataProp_10=&mDataProp_11=&mDataProp_12=&sSearch=&bRegex=false&sSearch_0=&bRegex_0=false&bSearchable_0=false&sSearch_1=&bRegex_1=false&bSearchable_1=true&sSearch_2=&bRegex_2=false&bSearchable_2=true&sSearch_3=&bRegex_3=false&bSearchable_3=true&sSearch_4=&bRegex_4=false&bSearchable_4=true&sSearch_5=&bRegex_5=false&bSearchable_5=true&sSearch_6=&bRegex_6=false&bSearchable_6=true&sSearch_7=&bRegex_7=false&bSearchable_7=true&sSearch_8=&bRegex_8=false&bSearchable_8=true&sSearch_9=&bRegex_9=false&bSearchable_9=true&sSearch_10=&bRegex_10=false&bSearchable_10=true&sSearch_11=&bRegex_11=false&bSearchable_11=false&sSearch_12=&bRegex_12=false&bSearchable_12=false&iSortCol_0=0&sSortDir_0=asc&iSortingCols=1&bSortable_0=false&bSortable_1=true&bSortable_2=true&bSortable_3=true&bSortable_4=true&bSortable_5=true&bSortable_6=true&bSortable_7=true&bSortable_8=true&bSortable_9=false&bSortable_10=false&bSortable_11=false&bSortable_12=false&_=1519067795588"
-
-
-```
-
-
-```{r}
-#viz it up
-
-```
-
-
-```{r}
-#Come to a statistical conclusion and call this shit DONE
-
-```
 
 
 

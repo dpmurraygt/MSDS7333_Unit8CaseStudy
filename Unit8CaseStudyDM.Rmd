@@ -111,13 +111,25 @@ How do local runners compare to international and non local?
 
 ```{r fig.width=8.5, fig.height=4}
 AllFinishers %>% filter(GenderPlace==1) %>% mutate(year=as.factor(year)) %>%
-  ggplot(aes(x=year, y=runTime, group=sex, color=sex)) + geom_point() + theme_light() + scale_color_manual(values=c("#4286f4", "#fc41e9")) + theme(legend.position = "bottom")
+  ggplot(aes(x=year, y=runTime, group=sex, color=sex)) + geom_point() + geom_line() + theme_light() + scale_color_manual(values=c("#4286f4", "#fc41e9")) + theme(legend.position = "bottom") + scale_y_continuous("Time In Minutes") + ggtitle("Fastest Time By Race Year, by Gender")
 ```
 ```{r fig.width=8.5, fig.height=4}
 #What about Total Race Size?
-AllFinishers %>% group_by(year, sex) %>% summarise(RunnerCount = n()) %>% ggplot(aes(x=year, y=RunnerCount, color=sex)) + geom_line(size=1) + theme_light() + scale_color_manual(values=c("#4286f4", "#fc41e9")) + theme(legend.position = "bottom") + scale_y_continuous(labels=comma, "Total Runners")
+AllFinishers %>% group_by(year, sex) %>% summarise(RunnerCount = n()) %>% ggplot(aes(x=year, y=RunnerCount, color=sex)) + geom_line(size=1) + theme_light() + scale_color_manual(values=c("#4286f4", "#fc41e9")) + theme(legend.position = "bottom") + scale_y_continuous(labels=comma, "Total Runners") +ggtitle("")
+
+AllFinishers %>% group_by(year, sex) %>% summarise(RunnerCount=n()) %>% group_by(year) %>% mutate(RunnerCount=RunnerCount/sum(RunnerCount)) %>% spread(sex, RunnerCount)
 
 ```
+```{r fig.width=8.5, fig.height=4}
+#Have participants ages changed signfiicantly?
+AllFinishers %>% filter(sex=="W") %>% ggplot(aes(x=as.factor(year), y=age, color=sex)) + geom_boxplot() + theme_light() + scale_color_manual(values=c("#fc41e9")) + theme(legend.position = "none") + scale_y_continuous(labels=comma, "Age") +ggtitle("") + scale_x_discrete("Year") + ggtitle("Distribution of Age for Women Runners, 1999-2012")
+
+
+AllFinishers %>% filter(sex=="M") %>% ggplot(aes(x=as.factor(year), y=age, color=sex)) + geom_boxplot() + theme_light() + scale_color_manual(values=c("#4286f4")) + theme(legend.position = "none") + scale_y_continuous(labels=comma, "Age") +ggtitle("") + scale_x_discrete("Year") + ggtitle("Distribution of Age for Men Runners, 1999-2012")
+
+AllFinishers %>% filter(sex=="M") %>% group_by(year) %>% summarise(meanAge = mean(age), SD = sd(age))
+```
+
 
 
 ```{r fig.width=8.5, fig.height=4}
@@ -129,6 +141,7 @@ AllFinishers %>% filter(AgeGroupPlace==1) %>% mutate(year=as.factor(year)) %>% f
 AllFinishers %>% filter(AgeGroupPlace==1) %>% mutate(year=as.factor(year)) %>% filter(age>64 & age != 0) %>%
   ggplot(aes(x=year, y=runTime, group=sex, color=sex)) + geom_point() + geom_line( ) + theme_light() + scale_color_manual(values=c("#4286f4", "#fc41e9")) + facet_wrap(~AgeGroup, ncol=5) + theme(legend.position="bottom") + scale_x_discrete(labels=c())
 
+AllFinishers %>% group_by(year, AgeGroup, sex) %>% summarise(n()) %>% filter(AgeGroup == "Under 19")
 ```
 
 
@@ -150,7 +163,7 @@ AllFinishers %>%mutate(year=as.factor(year)) %>% ggplot(aes(x=age, color=sex)) +
 The fields have gotten larger overall.
 
 ```{r fig.width=8.5, fig.height=4}
-AllFinishers %>%mutate(year=as.factor(year)) %>% ggplot(aes(x=age, color=year)) + geom_density() + theme_light()+ theme(legend.position = "bottom")
+AllFinishers  %>% mutate(year=as.factor(year)) %>% ggplot(aes(x=age, color=year)) + geom_density() + theme_light()+ theme(legend.position = "bottom")
 #this needs a better color palette
 ```
 
@@ -213,7 +226,7 @@ AllPredicted %>% ggplot(aes(x=age, y=PredictedTime, group=sex, color=sex)) +
 
 FinishersWithPredicted <- inner_join(AllFinishers, AllPredicted, by=c("age", "sex")) %>% mutate(NormalizedTime = (runTime-PredictedTime)/(PredictedTime))
 
-FinishersWithPredicted %>% ggplot(aes(x=age, NormalizedTime, color=sex, group=sex)) + geom_point(alpha=0.05) + theme_light() + facet_grid(sex~year) + scale_color_manual(values=c("#4286f4", "#fc41e9")) + theme(legend.position = "bottom") + scale_y_continuous("Time Normalized to Predicted Fastest Time")
+FinishersWithPredicted %>% filter(year %in% c(1999, 2012)) %>% ggplot(aes(x=age, NormalizedTime, color=sex, group=sex)) + geom_point(alpha=0.25) + theme_light() + facet_grid(sex~year) + scale_color_manual(values=c("#4286f4", "#fc41e9")) + theme(legend.position = "bottom") + scale_y_continuous("Time Normalized to Predicted Fastest Time")
 
 
 
