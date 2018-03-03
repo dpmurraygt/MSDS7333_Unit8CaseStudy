@@ -48,22 +48,19 @@ source("src/make.R")
 #### there are a couple viz in EDA sections that call for an object you likely had in memory
 #### but is not in .RMD
 ```{r imputation, include=FALSE, echo=FALSE}
-ages<- c(20:80)
 #Combine men and women.  One Dataframe to rule them all.
 AllFinishers <- rbind(cbMen, cbWomen)
 
 # did some google research here, these youngins are for real!!!
 # lets change age to <=5, 
 AllFinishers <- AllFinishers %>% 
-                mutate(age, 
-                 age=replace(age, age <= 5, NA))
+                  mutate(age, age=replace(age, age <= 5, NA))
 
 # only one runner < 30, but let's impute
 AllFinishers <- AllFinishers %>% 
-                mutate(runTime, 
-                 runTime=replace(runTime, runTime <= 30, NA))
+                 mutate(runTime, runTime=replace(runTime, runTime <= 30, NA))
 
-# shuffle
+# shuffle prior to imputation
 AllFinishers <- AllFinishers[sample(nrow(AllFinishers)),]
 
 # which did we null out for age?
@@ -231,7 +228,8 @@ AllFinishersM <- AllFinishers[AllFinishers$sex == "M",]
 AllFinishersW <- AllFinishers[AllFinishers$sex == "W",]
 
 # get best times for both men and women to use in LOESS smoothing
-BestTimes <- AllFinishers[,c("sex","age", "runTime")] %>%
+BestTimes <- AllFinishers %>%
+             group_by(sex, age) %>%
              summarise(fastest=min(runTime))
 
 BestTimesM <- BestTimes[BestTimes$sex == "M",]
