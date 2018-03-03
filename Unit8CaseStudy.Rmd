@@ -43,7 +43,10 @@ source("src/make.R")
 ## Results
 
 ####Note to Dennis: Added in imputation. Also added in normalized analysis. Should be ready
-#### to write up
+#### to write up. Salient points: kept all data in for predictions after imputation, reduced span
+#### to 0.5 to catch curves better but not too much. Adjusted some of your code but viz works
+#### there are a couple viz in EDA sections that call for an object you likely had in memory
+#### but is not in .RMD
 ```{r imputation, include=FALSE, echo=FALSE}
 ages<- c(20:80)
 #Combine men and women.  One Dataframe to rule them all.
