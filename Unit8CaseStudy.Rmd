@@ -337,7 +337,7 @@ all_runners_imp <- cbind(all_runners[, c("sex","name","home")],
 # what does imputation look like for age?
 all_runners_imp[which(is.na(all_runners$age)),]
 
-# separate men and women into imputed datasets
+# separate men and women into imputed datasets for analysis
 cbMen_imp = all_runners_imp[all_runners_imp$sex=="M",]
 cbWomen_imp = all_runners_imp[all_runners_imp$sex=="W",]
 
@@ -347,11 +347,14 @@ fastestMen = tapply(cbMen_imp$runTime,
                     min, 
                     na.rm = FALSE) # we imputed here instead
 
-
 # convert to numeric
 age_fastest_men = as.numeric(names(fastestMen))
 # smooth fastest times by fitting and predicting LOESS
-mens_fast_lfit = loess(fastestMen ~ age_fastest_men, span=0.25)
+# reduce LOESS span, get significant curve up in age
+# consider kids < 12 yrs old
+table(cbMen_imp$age) # too few obs when considering < 12 and > 80
+
+mens_fast_lfit = loess(fastestMen ~ age_fastest_men, span=0.5)
 mens_fast_lpred = predict(mens_fast_lfit, data.frame(age = age_fastest_men), se = FALSE)
 plot(fastestMen ~ names(fastestMen), type ="l", xlim = c(20, 80))
 lines(x = age_fastest_men, y = mens_fast_lpred, col = "purple", lwd = 2)
@@ -359,18 +362,25 @@ lines(x = age_fastest_men, y = mens_fast_lpred, col = "purple", lwd = 2)
 # normalize times - index on cbMen$age
 # ensure predictions match ages
 names(mens_fast_lpred) = age_fastest_men
+
+# normalize times
 timeNorm_m = cbMen_imp$runTime / mens_fast_lpred[as.character(cbMen_imp$age)]
 time99Norm_m = timeNorm_m[cbMen_imp$year == 1999]
 time12Norm_m = timeNorm_m[cbMen_imp$year == 2012]
 
+# 1999 age normalized times faster across all quartiles
 summary(time99Norm_m)
 summary(time12Norm_m)
 
+
+
+par(mfrow=c(1,2))
 plot(density(100*time99Norm_m, na.rm = TRUE), 
     # ylim = c(0, 0.05), 
      col = "purple",
      lwd = 3,  xlab = "Time (percentage)",
-     main = "Time Distribution for 1999 and 2012 Runners\n Percentage of the fastest runner for that age")
+     main = "Time Normalized Distribution \n 1999 & 2012 Runners",
+     cex.main = 0.8)
 lines(density(100*time12Norm_m, na.rm = TRUE), 
           lwd = 3, col = "green")
 legend("topleft", fill = c("purple", "green"),
@@ -381,9 +391,15 @@ legend("topleft", fill = c("purple", "green"),
 qqplot(time99Norm_m, time12Norm_m, pch = 19, cex = 0.5, 
        xlab = "Time in 1999 Race",
        ylab = "Time in 2012 Race", 
-       main = "Quantile-quantile plot of male runner's performance")
+       main = "QQ Plot of Time Normalized Performance",
+       cex.main = 0.8)
 abline(a =0, b = 1, col="red", lwd = 2)
 
+# mode of distributions for 1999 peak earlier than 2012
+# also tighter spread of times, indicates 1999 faster when
+# considering age based times
+# qq plot shows distributions are not normal, pull toward 2012
+# indicating higher times in 2012 based on age
 
 # for the women
 
