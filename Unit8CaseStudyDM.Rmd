@@ -125,15 +125,14 @@ AllFinishers %>% group_by(year, sex) %>% summarise(RunnerCount = n()) %>% ggplot
 AllFinishers %>% filter(AgeGroupPlace==1) %>% mutate(year=as.factor(year)) %>% filter(age<=64 & age != 0) %>%
   ggplot(aes(x=year, y=runTime, group=sex, color=sex)) + geom_point() + geom_line( ) + theme_light() + scale_color_manual(values=c("#4286f4", "#fc41e9")) + facet_wrap(~AgeGroup, ncol=5) + theme(legend.position="bottom") + scale_x_discrete(labels=c())
 
+
+AllFinishers %>% filter(AgeGroupPlace==1) %>% mutate(year=as.factor(year)) %>% filter(age>64 & age != 0) %>%
+  ggplot(aes(x=year, y=runTime, group=sex, color=sex)) + geom_point() + geom_line( ) + theme_light() + scale_color_manual(values=c("#4286f4", "#fc41e9")) + facet_wrap(~AgeGroup, ncol=5) + theme(legend.position="bottom") + scale_x_discrete(labels=c())
+
 ```
 
 
 
-```{r}
-#loess implementation
-RunTimeModel <- loess(runTime ~ age, data=AllFinishers)
-summary(RunTimeModel)
-```
 
 ```{r}
 #Come to a statistical conclusion and call this shit DONE
@@ -165,20 +164,57 @@ Q.11 Normalize each male runner’s time by the fastest time for the runner of t
 Nolan, Deborah; Lang, Duncan Temple. Data Science in R: A Case Studies Approach to Computational Reasoning and Problem Solving (Chapman & Hall/CRC The R Series) (Page 101). CRC Press. Kindle Edition. 
 
 ```{r fig.height=4, fig.width=8.5}
-TopFinisher<-AllFinishers %>% group_by(age, sex, year) %>% mutate(BestInAgeTime = min(runTime), WorstInAgeGroup = max(runTime)) %>% mutate(NormalizedTime = (runTime-BestInAgeTime)/(WorstInAgeGroup-BestInAgeTime))
+TopFinisher<-AllFinishers %>% group_by(age, sex, year) %>% mutate(BestInAgeTime = min(runTime), WorstInAgeGroup = max(runTime)) 
 
 BestTime<-AllFinishers %>% group_by(age, sex, year) %>% summarise(BestInAgeTime = min(runTime))
 
 
 TopFinisher %>% ggplot(aes(x=age, y=NormalizedTime, group=sex, color=sex)) + geom_point() + theme_light() + scale_color_manual(values=c( "#fc41e9", "#4286f4")) + facet_wrap(~sex)
 
-BestTime %>% ggplot(aes(x=age, y=BestInAgeTime, group=sex, color=sex)) + geom_point() + theme_light() + scale_color_manual(values=c("#4286f4", "#fc41e9")) + facet_wrap(~sex) + geom_smooth(method="loess") + theme(legend.position = "bottom") + ggtitle("Fastest Time by Age by Gender, 1999-2012")
+BestTime %>% ggplot(aes(x=age, y=BestInAgeTime, group=sex, color=sex)) + geom_point(alpha=0.3) + theme_light() + scale_color_manual(values=c("#4286f4", "#fc41e9")) + facet_wrap(~sex) + geom_smooth(method="loess") + theme(legend.position = "bottom") + ggtitle("Fastest Time by Age by Gender, 1999-2012") + scale_x_continuous(limits=c(20,80)) + scale_y_continuous("Best Performance by Age, 1999-2012")
 
 
 ```
 
-```{r}
-MensFastest <- BestTime %>% filter()
+```{r fig.width=8.5, fig.height=4}
+ages<- c(20:80)
+
+MensTimes <- BestTime %>% filter(sex=="M")
+
+RunModelMen <- loess(BestInAgeTime ~ age, data=MensTimes)
+
+
+PredictedTime <- predict(RunModel, newdata = ages)
+PredictionsMen <- data.frame(ages, PredictedTime, as.character("M"))
+colnames(PredictionsMen) <- c("age", "PredictedTime", "sex")
+
+ages<- c(20:80)
+
+WomensTimes <- BestTime %>% filter(sex=="W")
+
+RunModelWomen <- loess(BestInAgeTime ~ age, data=WomensTimes)
+
+
+PredictedTimeWomens <- predict(RunModelWomen, newdata = ages)
+PredictionsWomen <- data.frame(ages, PredictedTimeWomens, as.character("W"))
+colnames(PredictionsWomen) <- c("age", "PredictedTime", "sex")
+
+AllPredicted <- rbind(PredictionsWomen, PredictionsMen)
+
+AllPredicted %>% ggplot(aes(x=age, y=PredictedTime, group=sex, color=sex)) + 
+  geom_line(size=1.1) + theme_light() + 
+  scale_color_manual(values=c( "#fc41e9", "#4286f4")) + 
+  facet_wrap(~sex) + ggtitle("LOESS Predicted Run Times By Age By Gender") + scale_x_continuous("Age") + scale_y_continuous("Predicted Time in Minutes") + theme(legend.position = "bottom")
+
+```
+
+
+```{r fig.width=8.5, fig.height=6}
+
+FinishersWithPredicted <- inner_join(AllFinishers, AllPredicted, by=c("age", "sex")) %>% mutate(NormalizedTime = (runTime-PredictedTime)/(PredictedTime))
+
+FinishersWithPredicted %>% ggplot(aes(x=age, NormalizedTime, color=sex, group=sex)) + geom_point(alpha=0.05) + theme_light() + facet_grid(sex~year) + scale_color_manual(values=c("#4286f4", "#fc41e9")) + theme(legend.position = "bottom") + scale_y_continuous("Time Normalized to Predicted Fastest Time")
+
 
 
 ```
