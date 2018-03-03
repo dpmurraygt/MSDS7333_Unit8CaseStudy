@@ -275,85 +275,199 @@ plot(gap14 ~ age20to80, type = "l" , xlab = "Age (years)",
 # replace ages < 10, 10M is for 13 and up, likely errors
 
 # impute instead of toss out, take different approach than authors
+# Lidiya Grigoryeva is an example
 
-cbMen <- cbMen %>% 
-          mutate(age, 
-                 age=replace(age, age <= 15, NA))
+all_runners <- rbind(cbMen, cbWomen)
 
-cbMen <- cbMen %>% 
-          mutate(runTime, 
+# did some google research here, these youngins are for real!!!
+# lets change age to <=5, 
+all_runners <- all_runners %>% 
+                mutate(age, 
+                 age=replace(age, age <= 5, NA))
+
+# only one runner < 30, but let's impute
+all_runners <- all_runners %>% 
+                mutate(runTime, 
                  runTime=replace(runTime, runTime <= 30, NA))
 
-# which did we null out?
-nulls <- which(is.na(cbMen$age))
+# shuffle
+all_runners <- all_runners[sample(nrow(all_runners)),]
+
+# which did we null out for age?
+nulls <- which(is.na(all_runners$age))
 
 # clean up whitespace just because it's obnoxious
-cbMen[,c("sex","name","home")] <- apply(cbMen[,c("sex", "name", "home")], 
-                                        2, 
-                                        trimws)
+all_runners[,c("sex","name","home")] <- apply(all_runners[,c("sex", "name", "home")], 
+                                              2, 
+                                              trimws)
 
      
 # prep for imputation, if we really wanted to get sexy here we 
 # could cut VAR on country, obvious indicator for runTime and age, tried this and countries are MESSY
 # dont have enough time to complete this extra task + that extra task 
-cbMen_imp <- cbMen[,c("age","runTime", "year","sex")]
+all_runners_imp <- all_runners[,c("age","runTime", "year","sex")]
 
 # this doesnt matter unless we do agg analysis including women
-cbMen_imp <- cbMen_imp %>% 
-                  mutate(sex = ifelse(sex == "M", 1, 0 ))
+# call binary indicator to speed up imputation process a bit
+all_runners_imp <- all_runners_imp %>% 
+                   mutate(sex = ifelse(sex == "W", 1, 0 ))
 
 
-# RF (non parametric) impute using random forest imputer
-imp_object <- missForest(cbMen_imp)
+# non parametric impute using random forest imputer
+# reduce number of trees for time purposes, accuracy trade off not much diff
+set.seed(42)
+impute_object <- missForest(all_runners_imp, 
+                            ntree = 50, 
+                            maxiter = 3,
+                            variablewise = FALSE,
+                            verbose = FALSE)
 
 # all numeric, small normalized RMSE
-imp_object$OOBerror 
+impute_object$OOBerror 
 
 # get imputed features and round age predictions
-cbMen_imp <- imp_object$ximp
-cbMen_imp$age <- round(cbMen_imp$age)
+all_runners_imp <- impute_object$ximp
+all_runners_imp$age <- round(all_runners_imp$age)
 
-# imputed cbMen, column bind others to re-create full data set
-cbMen_imp <- cbind(cbMen[, c("sex","name","home")],
-                   cbMen_imp[,-4] )
+# column bind other features not included in impute
+# to re-create full data set
+all_runners_imp <- cbind(all_runners[, c("sex","name","home")],
+                         all_runners_imp[,-4] )
 
+# what does imputation look like for age?
+all_runners_imp[which(is.na(all_runners$age)),]
 
-# START ASSIGNMENT: NEED TO DO SAME FOR WOMEN
-# this is our assignment - age grading
+# separate men and women into imputed datasets
+cbMen_imp = all_runners_imp[all_runners_imp$sex=="M",]
+cbWomen_imp = all_runners_imp[all_runners_imp$sex=="W",]
+
+# start men's analysis
 fastestMen = tapply(cbMen_imp$runTime, 
                     cbMen_imp$age,
                     min, 
                     na.rm = FALSE) # we imputed here instead
 
-plot(fastestMen ~ names(fastestMen), type ="l", xlim = c(20, 80))
+
 # convert to numeric
 age_fastest_men = as.numeric(names(fastestMen))
 # smooth fastest times by fitting and predicting LOESS
-mens_fast_lfit = loess(fastestMen ~ age_fastest_men)
+mens_fast_lfit = loess(fastestMen ~ age_fastest_men, span=0.25)
 mens_fast_lpred = predict(mens_fast_lfit, data.frame(age = age_fastest_men), se = FALSE)
+plot(fastestMen ~ names(fastestMen), type ="l", xlim = c(20, 80))
 lines(x = age_fastest_men, y = mens_fast_lpred, col = "purple", lwd = 2)
 
 # normalize times - index on cbMen$age
 # ensure predictions match ages
 names(mens_fast_lpred) = age_fastest_men
-timeNorm = cbMen_imp$runTime / mens_fast_lpred[as.character(cbMen_imp$age)]
-time99Norm = timeNorm[cbMen_imp$year == 1999]
-time12Norm = timeNorm[cbMen_imp$year == 2012]
+timeNorm_m = cbMen_imp$runTime / mens_fast_lpred[as.character(cbMen_imp$age)]
+time99Norm_m = timeNorm_m[cbMen_imp$year == 1999]
+time12Norm_m = timeNorm_m[cbMen_imp$year == 2012]
 
+summary(time99Norm_m)
+summary(time12Norm_m)
 
-
-summary(time99Norm)
-summary(time12Norm)
-
-plot(density(100*time99Norm, na.rm = TRUE), 
+plot(density(100*time99Norm_m, na.rm = TRUE), 
     # ylim = c(0, 0.05), 
      col = "purple",
      lwd = 3,  xlab = "Time (percentage)",
      main = "Time Distribution for 1999 and 2012 Runners\n Percentage of the fastest runner for that age")
-lines(density(100*time12Norm, na.rm = TRUE), 
+lines(density(100*time12Norm_m, na.rm = TRUE), 
           lwd = 3, col = "green")
 legend("topleft", fill = c("purple", "green"),
        legend = c("1999", "2012"), bty = "n")
+
+# 2012 age controlled times are definitely slower, 
+# runners generally ran slower for their age grps
+qqplot(time99Norm_m, time12Norm_m, pch = 19, cex = 0.5, 
+       xlab = "Time in 1999 Race",
+       ylab = "Time in 2012 Race", 
+       main = "Quantile-quantile plot of male runner's performance")
+abline(a =0, b = 1, col="red", lwd = 2)
+
+
+# for the women
+
+fastestWomen = tapply(cbWomen_imp$runTime, 
+                      cbWomen_imp$age,
+                      min, 
+                      na.rm = FALSE) # we imputed here instead
+
+
+# convert to numeric
+age_fastest_women = as.numeric(names(fastestWomen))
+# smooth fastest times by fitting and predicting LOESS
+women_fast_lfit = loess(fastestWomen ~ age_fastest_women, span = 0.25)
+women_fast_lpred = predict(women_fast_lfit, data.frame(age = age_fastest_women), se = FALSE)
+plot(fastestWomen ~ names(fastestWomen), type ="l", xlim = c(20, 80))
+lines(x = age_fastest_women, y = women_fast_lpred, col = "purple", lwd = 2)
+
+# normalize times - index on cbWomen$age
+# ensure predictions match ages
+names(women_fast_lpred) = age_fastest_women
+timeNorm_w = cbWomen_imp$runTime / women_fast_lpred[as.character(cbWomen_imp$age)]
+time99Norm_w = timeNorm_w[cbWomen_imp$year == 1999]
+time12Norm_w = timeNorm_w[cbWomen_imp$year == 2012]
+
+summary(time99Norm_w)
+summary(time12Norm_w)
+
+plot(density(100*time99Norm_w, na.rm = TRUE), 
+    # ylim = c(0, 0.05), 
+     col = "purple",
+     lwd = 3,  xlab = "Time (percentage)",
+     main = "Time Distribution for 1999 and 2012 Runners\n Percentage of the fastest runner for that age")
+lines(density(100*time12Norm_w, na.rm = TRUE), 
+          lwd = 3, col = "green")
+legend("topleft", fill = c("purple", "green"),
+       legend = c("1999", "2012"), bty = "n")
+
+# 2012 age controlled times are definitely slower, 
+# runners generally ran slower for their age grps
+qqplot(time99Norm_w, time12Norm_w, pch = 19, cex = 0.5, 
+       xlab = "Age Normalized Time in 1999 Race",
+       ylab = "Age Normalized Time in 2012 Race", 
+       main = "Quantile-quantile plot of female runner's performance")
+abline(a =0, b = 1, col="red", lwd = 2)
+
+
+
+plot(density(100*time99Norm_m, na.rm = TRUE), 
+    # ylim = c(0, 0.05), 
+     col = "purple", ylim=c(0,0.05),
+     lwd = 3,  xlab = "Time (percentage)",
+     main = "Time Distribution for 1999 and 2012 Runners\n Percentage of the fastest runner for that age")
+lines(density(100*time99Norm_w, na.rm = TRUE), 
+          lwd = 3, col = "green")
+legend("topleft", fill = c("purple", "green"),
+       legend = c("1999M", "1999W"), bty = "n")
+
+
+qqplot(time99Norm_m, time99Norm_w, pch = 19, cex = 0.5, 
+       xlab = "Age Normalized Time in 1999 Race for Men",
+       ylab = "Age Normalized Time in 1999 Race for Women", 
+       main = "Quantile-quantile plot of female runner's performance")
+abline(a =0, b = 1, col="red", lwd = 2)
+
+
+
+plot(density(100*time12Norm_m, na.rm = TRUE), 
+     ylim = c(0, 0.02), 
+     col = "purple",
+     lwd = 3,  xlab = "Time (percentage)",
+     main = "Time Distribution for 2012 Runners Age Normalized Results \n Men v Women")
+lines(density(100*time12Norm_w, na.rm = TRUE), 
+          lwd = 3, col = "green")
+legend("topleft", fill = c("purple", "green"),
+       legend = c("2012M", "2012W"), bty = "n")
+
+
+qqplot(time12Norm_m, time12Norm_w, pch = 19, cex = 0.5, 
+       xlab = "Age Normalized Time in 2012 Race for Men",
+       ylab = "Age Normalized Time in 2012 Race for Women", 
+       main = "Quantile-quantile plot of female runner's performance")
+abline(a =0, b = 1, col="red", lwd = 2)
+
+t.test(time12Norm_m, time12Norm_w)
 
 ```
 
