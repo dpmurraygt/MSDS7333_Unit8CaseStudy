@@ -171,6 +171,8 @@ AllFinishers %>%
 ```
 Examination of this series of visualizations also allows an inference to the relationship of a runner's age to his finishing time that we will examine, and then model, in greater detail.  The visualization includes the fastest running time for every age between 20 and 80, for each race between 1999 and 2012.  Excluding the youngest, and the oldest participants from our research, the running times seem to follow a pattern for men of peak performance in the early twenties, with steadily increasing times for the rest of life, and more steeply increasing times and slower performances from age 60 to 80.  Women seem to peak closer to thirty, with times slowing through their thirties and fourties and experiencing an earlier degradation in performance and a steepening curve through their fifties and beyond.
 
+There may also be some inference made about sudden changes in the winning times for age groups.  The increase of the winning time in the 30-34 age group in the 2011 and 2012 races could signal a key competitor has aged out of the group - and indeed, we see the 35-39 age group for men taking a sudden drop in winning time in 2011 and 2012. While the race size overall is large - there could be a few elite competitors that set the pace for most of the age groups.
+
 ```{r eda6, include = TRUE, echo = FALSE, fig.height=4, fig.width=8.5}
 TopFinisher <- AllFinishers %>% 
                 group_by(age, sex, year) %>% 
@@ -531,10 +533,10 @@ t.test(time12NormM, time12NormW)
 
 
 ```
-The two sample student's t-test again finds a sinfiican g
+The two sample student's t-test again finds a significant difference between mens' and womens' relative times; however, this time the performance gap has narrowed.  Men still run a faster time relative to their age and gender, with a mean time of 1.77 times fastest time, while Women run a mean time of 1.80 times their age and gender's fastest time.  This is still a statistically signficant difference (p<0.0001).
 
 ```{r}
-
+#Do we need this section?  I don't think so?
 # reset All_Predicted based on new analysis methods above
 AllPredicted <- rbind(data.frame(time = PredictedTimeW, sex="W", 
                                  age=as.numeric(names(PredictedTimeW))),  
@@ -555,13 +557,19 @@ AllPredicted %>% ggplot(aes(x=age, y=time, group=sex, color=sex)) +
 
 
 ## Future Work and Conclusions
+The comparison of the results of the Cherry Blossom Ten Mile Race between 1999 and 2012 has led to several interesting insights.  
+
+The sport of running, and this event specifically, have seen rapid expansion for a 13 year time period, with a substantially higher interest in the event from women.  Women's interest in running as a sport has led to the creation of all female events like the Disney Princess events.  There has also been an expansion of womens' running product lines from many brands, with a shifting strategy towards brands that cater exclusively to female athletes and runners.
+
+The event has also moved towards higher participation by mid-pack athletes and walkers.  Race organizers should ensure their race is well-organized and still well supported for longer durations.  In consideration of these athletes, there may be a need for greater, or different medical support services throughout the course and at the finish line.  These athletes are also likely the best audience for many race sponsors.
+
 Application of predictive timing in running and other endurance sports holds numerous applications.
 
 The running community holds the integrity of their sport in highest regard.  This has spurred a cottage industry of people who attempt to expose persons who may be taking unethical steps to improve their race times.  This varies from persons not following the selected course (either via a cut through or non-foot transportation), as well as people using surrogates carrying their bib to help qualify for prestigious races like the Boston Marathon.  Much of this research has been powered via the published results on race websites, as well as aggregator active.com.  The researchers have largely looked for suspicious results on a one-by-one basis, but a loess-based model based on age using multiple years results could lend new insight to questionable results.
 
 Likewise, Race Organizers could benefit from deeper insight into their event for practical purposes.  Race organizers must first schedule road closures with municipal authorities to ensure a safe course for participants.  Understanding the age distribution, and the predicted finish times for their participants, might reduce the chances that a runner is not allowed to finish the race due to slow running times.  Additionally, race logistics like start waves are also dependent on expectation of the time required for a specific runner to finish the race.  While in most large races this is done on a seeding based n prior finishing times for the same distance, or expected finishing time based on other distances - unknown runners could be added to other groups based on a calculated race finishing time based on age.
 
-Fitness devices, and smart phone applications for fitness have become a standard for recreational runners.  
+Fitness devices, and smart phone applications for fitness have become a standard for recreational runners.  Predictive pacing could hold a competitive advantage to a device that helps an athlete train smarter.
 
 ## References
 [1] – Anderson, Owens, “Running Science”, HumanKinetics.com, http://www.humankinetics.com/excerpts/excerpts/genes-and-running-performance.
