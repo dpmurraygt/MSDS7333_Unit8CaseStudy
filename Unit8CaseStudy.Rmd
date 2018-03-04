@@ -258,6 +258,7 @@ summary(time12NormM)
 # for better understanding (e.g. men in 1999 are ~160% of world record time for
 # all age groups)
 #par(mfrow=c(2,1))
+#plot(density(100*time99NormM, na.rm = TRUE), 
 #    # ylim = c(0, 0.05), 
 #     col = "purple",
 #     lwd = 3,  xlab = "Time (percentage)",
@@ -439,23 +440,30 @@ A two sample Student's t-test finds a difference between the two years' women's 
 # Party like it's 1999 - compare normalized times between genders
 # again, change these visualizations up if desired
 
-par(mfrow=c(2,1))
-plot(density(100*time99NormM, na.rm = TRUE), 
-     ylim = c(0, 0.02), 
-     col = "purple",
-     lwd = 3,  xlab = "Time (percentage)",
-     main = "Run Time Distribution for Male vs Female Runners
-             Percentage of the Fastest Runner for a Given Age",
-     cex.main = 0.8, cex.lab = 0.8, cex.axis = 0.8)
+#par(mfrow=c(2,1))
+#plot(density(100*time99NormM, na.rm = TRUE), 
+#     ylim = c(0, 0.02), 
+#     col = "purple",
+#     lwd = 3,  xlab = "Time (percentage)",
+#     main = "Run Time Distribution for Male vs Female Runners
+#             Percentage of the Fastest Runner for a Given Age",
+#     cex.main = 0.8, cex.lab = 0.8, cex.axis = 0.8)
 
-lines(density(100*time99NormW, na.rm = TRUE), 
-          lwd = 3, col = "green")
+#lines(density(100*time99NormW, na.rm = TRUE), 
+#          lwd = 3, col = "green")
 
-legend("topleft", fill = c("purple", "green"),
-       legend = c("1999M", "1999W"), bty = "n",
-       cex = 0.8)
+#legend("topleft", fill = c("purple", "green"),
+#       legend = c("1999M", "1999W"), bty = "n",
+#       cex = 0.8)
+
+AllNormTimes<-data.frame(age=names(time99NormM), year="1999", sex="M", NormRunTime=time99NormM)
+AllNormTimes<-rbind(AllNormTimes, data.frame(age=names(time99NormW), year="2012", sex="F", NormRunTime=time99NormW))
+
+AllNormTimes %>% ggplot(aes(x=NormRunTime, color=sex, group=sex)) + geom_density(size=1) + theme_light() + theme(legend.position = "bottom") + ggtitle("Density of Normalized Run Time - Men vs. Women, 1999", subtitle = "Run Times Normalized to Fastest Time by Age Within Gender over All Race Years")
+
+
 ```
-
+In 1999, we can infer that the performance of the mens' field is more closely aligned to the elite portion of their field than the women's field is to their elite competitors.  The median male performance is 1.6x the time of the first place finisher for their age, while females are above 1.75.  
 
 
 ```{r}
@@ -468,39 +476,64 @@ qqplot(time99NormM, time99NormW, pch = 19, cex = 0.5,
        cex.main = 0.8, cex.lab = 0.8, cex.axis = 0.8)
 abline(a =0, b = 1, col="red", lwd = 2)
 par(mfrow=c(1,1))
+```
 
+````{r}
 # men age controlled outperform women in 99
 t.test(time99NormM, time99NormW)
+```
 
+The two-sample student's t-test shows a statistically signficant difference of the mean relative performance of men and women.  Men are 0.07 faster than women (p<0.0001).
+
+
+```{r fig.width=8.5, fig.height=4}
 
 # now for 2012 comparisons
 
-par(mfrow=c(2,1))
-plot(density(100*time12NormM, na.rm = TRUE), 
-     ylim = c(0, 0.02), 
-     col = "purple",
-     lwd = 3, 
-     xlab = "Time (percentage)",
-     main = "Run Time Distribution for Male vs Female Runners
-             Percentage of the Fastest Runner for a Given Age",
-     cex.main = 0.8, cex.lab = 0.8, cex.axis = 0.8)
+#par(mfrow=c(2,1))
+#plot(density(100*time12NormM, na.rm = TRUE), 
+#     ylim = c(0, 0.02), 
+#     col = "purple",
+#     lwd = 3, 
+#     xlab = "Time (percentage)",
+#     main = "Run Time Distribution for Male vs Female Runners
+ #            Percentage of the Fastest Runner for a Given Age",
+#     cex.main = 0.8, cex.lab = 0.8, cex.axis = 0.8)
 
-lines(density(100*time12NormW, na.rm = TRUE), 
-          lwd = 3, col = "green")
-legend("topleft", fill = c("purple", "green"),
-       legend = c("2012M", "2012W"), bty = "n",
-       cex = 0.8)
+#lines(density(100*time12NormW, na.rm = TRUE), 
+#          lwd = 3, col = "green")
+#legend("topleft", fill = c("purple", "green"),
+#       legend = c("2012M", "2012W"), bty = "n",
+#       cex = 0.8)
 
+
+AllNormTimes<-data.frame(age=names(time12NormM), year="2012", sex="M", NormRunTime=time12NormM)
+AllNormTimes<-rbind(AllNormTimes, data.frame(age=names(time12NormW), year="2012", sex="F", NormRunTime=time12NormW))
+
+AllNormTimes %>% ggplot(aes(x=NormRunTime, color=sex, group=sex)) + geom_density(size=1) + theme_light() + theme(legend.position = "bottom") + ggtitle("Density of Normalized Run Time - Men vs. Women, 2012", subtitle = "Run Times Normalized to Fastest Time by Age Within Gender over All Race Years")
+```
+
+Reviewing the density curves of 2012, the median mens' performance relative to fastest age performance has shifted to be very similar to the womens.  The distribution of the women is still a more narrow interquartile range than the men.   
+
+```{r}
 qqplot(time12NormM, time12NormW, pch = 19, cex = 0.5, 
        xlab = "Age Normalized Time - Men",
        ylab = "Age Normalized Time - Women", 
        main = "QQ Plot 2012: Men vs Women Normalized Times",
        cex.main = 0.8, cex.lab = 0.8, cex.axis = 0.8)
 abline(a =0, b = 1, col="red", lwd = 2)
+```
+
+```{r}
 
 # much closer for 12, but men slightly outperform
 t.test(time12NormM, time12NormW)
 
+
+```
+The two sample student's t-test again finds a sinfiican g
+
+```{r}
 
 # reset All_Predicted based on new analysis methods above
 AllPredicted <- rbind(data.frame(time = PredictedTimeW, sex="W", 
