@@ -44,74 +44,33 @@ source("src/make.R")
 
 ## Results
 
-####Note to Dennis: Added in imputation. Also added in normalized analysis. Should be ready
-#### to write up. Salient points: kept all data in for predictions after imputation, reduced span
-#### to 0.5 to catch curves better but not too much. Adjusted some of your code but viz works
-#### there are a couple viz in EDA sections that call for an object you likely had in memory
-#### but is not in .RMD
-```{r imputation, include=FALSE, echo=FALSE}
-cbMen2 <- load(file="Data/cbMen.rda")
-cbWomen2 <-load("Data/cbWomen.rda")
-
+```{r analysis_prep, include=FALSE, echo=FALSE}
+# DENNIS, THIS ENTIRE BLOCK HAS CHANGED, COPY/PASTE OVER OLD IMPUTATION
 #Combine men and women.  One Dataframe to rule them all.
 AllFinishers <- rbind(cbMen, cbWomen)
 
 # did some google research here, these youngins are for real!!!
-# lets change age to <=5, 
-AllFinishers <- AllFinishers %>% 
-                  mutate(age, age=replace(age, age <= 5, NA))
+# the 8 year old is legitimate per running records
+# lets change age to <= 7 to be NA, these contain zeros from the
+# data cleansing as well as a few odd ages that dont make sense
+# only 51 records to drop out of ~146K
 
-# only one runner < 30, but let's impute
+AllFinishers <- AllFinishers %>% 
+                  mutate(age, age = replace(age, age <= 7, NA))
+
+# only one runner < 30
 AllFinishers <- AllFinishers %>% 
                  mutate(runTime, runTime=replace(runTime, runTime <= 30, NA))
 
-# shuffle prior to imputation
-AllFinishers <- AllFinishers[sample(nrow(AllFinishers)),]
-
-# which did we null out for age?
-nulls <- which(is.na(AllFinishers$age))
+# how many did we null?, 52 total
+length(which(is.na(AllFinishers)))
 
 # clean up whitespace just because it's obnoxious
 AllFinishers[,c("sex","name","home")] <- apply(AllFinishers[,c("sex", "name", "home")], 
                                               2, 
                                               trimws)
-
-     
-# prep for imputation, if we really wanted to get sexy here we 
-# could cut VAR on country, obvious indicator for runTime and age
-AllFinishersImp <- AllFinishers[,c("age","runTime", "year","sex")]
-
-# this doesnt matter unless we do agg analysis including women
-# call binary indicator to speed up imputation process a bit
-AllFinishersImp <- AllFinishersImp %>% 
-                   mutate(sex = ifelse(sex == "W", 1, 0 ))
-
-
-# non parametric impute using random forest imputer
-# reduce number of trees for time purposes, accuracy trade off not much diff
-set.seed(42)
-ImputeObject <- missForest(AllFinishersImp, 
-                            ntree = 50, 
-                            maxiter = 3, # set back to 3
-                            variablewise = FALSE,
-                            verbose = FALSE)
-
-# all numeric, small normalized RMSE
-ImputeObject$OOBerror 
-
-# get imputed features and round age predictions
-AllFinishersImp <- ImputeObject$ximp
-AllFinishersImp$age <- round(AllFinishersImp$age)
-
-# column bind other features not included in impute
-# to re-create full data set
-AllFinishers <- cbind(AllFinishers[, c("sex","name","home")],
-                      AllFinishersImp[,-4] )
-any(is.na(AllFinishers$age))
-
-# what does imputation look like for age?
-AllFinishersImp[which(is.na(AllFinishers$age)),]
-
+# get rid of NAs
+AllFinishers <- AllFinishers[complete.cases(AllFinishers),]
 # ready to rock
 ```
 
@@ -357,6 +316,9 @@ PredictedTimeW <- predict(RunModelWomen, newdata = BestTimesW$age)
 plot(BestTimesW$fastest ~ BestTimesW$age, type ="l", xlim = c(20, 80))
 # smooth out fastest times
 lines(x = BestTimesW$age, y = PredictedTimeW, col = "purple", lwd = 2)
+
+BestTimesW %>% ggplot(aes(x=age, y=fastest, group=sex, color=sex)) + geom_line() + theme_light() + ggtitle("Fastest Female Race Time Across 1999-2012") + scale_x_continuous("Age") + scale_y_continuous("Run Time in Minutes") + geom_smooth(method = "loess") + scale_color_manual(values = c("#fc41e9")) + theme(legend.position = "bottom")
+
 
 # normalize all times based on fastest time predictions per instructions
 names(PredictedTimeW) = BestTimesW$age
