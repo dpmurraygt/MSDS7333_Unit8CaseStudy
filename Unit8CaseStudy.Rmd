@@ -37,12 +37,23 @@ source("src/make.R")
 ## Abstract
 
 ## Introduction
+The sport of running hsa experienced a large expansion of active participants since the popular inception of the sport.  While major events like the Boston Marathon have staged competitions for more than 100 years, the modern day sport saw a significant expansion of participation since 1970, and especially since 1995.
+The Cherry Blossom Ten Mile Race in Washington, DC has held annual races since 1973.  The races from the period of 1999 until 2012 have highly accessible results files available on the web, and display the results of runners at all levels of skill.
+The race has expanded in the number of entrants, both male and female, over this 13 year period.  The expansion of participants could be reflective of several overall trends.  Over this time, interest in fitness activities has expanded.  Overall participation in races expanded from 7 million in 1995 to almost 16 million in 2012[5].
+The research in this paper seeks to understand the difference for the field of both genders' performance in the event, controlling for age, between 1999 and 2012.  It is of interest to discover whether the increase in field size is of runners of all skill levels, or if the trend may signal expansion of the sport towards the general public and generally away from the elite sub-population of runners.
+We will first review available literature on the topic of performance modeling, then discuss methods for modeling, present an exploration of the data and results of the modeling for performance.  Our paper will conclude with a discussion of the applications of performance modeling in the increasingly data-driven world of personal fitness.
 
 ## Literature Review
+Modeling human running performance over time has been a topic for some time in medical, sports and evolutionary journals.  These reviews and studies have been conducted in order to more accurately determine where the human ability to do long distance running came from, how are bodies are made for such running, and the current impacts of diet and training in increasing speeds.  Ultimately, the data from the Cherry blossom race show the increasing popularity of long distance running, and the overall factors that age plays in modeling performance.
+Despite these factors, one of the leading researchers on the subject, Dr. Owen Anderson, showed through multiple studies looking at both hereditary and environmental effects that both are contributing factors to the overall increase in human performance over time; however, no definitive proof could be given as to the level of impact each had on a runner’s performance. [1]
+Further studies have confirmed that the overall impact of human physiology is unique to that of running, or at least having the ability to run; and that despite all of the play that one’s own environment has, it is never enough to fully get over our own physiology. [3][4] There are limits that are warned about, stating that the level of performance one can obtain is limited by physiological factors, and no matter how much diet or training is conducted, harm will come to the athlete who tries to go beyond those limits.[2]  In the Cherry Blossom data, it shows that while there is a net performance gain over time, but physiological (as shown by the difference between the overall ages, gender and performance time) factors are the limit in human running performance.
+
 
 ## Methods
 
 ## Results
+
+### Exploration of Cherry Blossom Ten Mile Race Data, 1999-2012
 
 ```{r analysis_prep, include=FALSE, echo=FALSE}
 # DENNIS, THIS ENTIRE BLOCK HAS CHANGED, COPY/PASTE OVER OLD IMPUTATION
@@ -91,7 +102,6 @@ AllFinishers <- AllFinishers %>% mutate(AgeGroup = cut(age, AgeThresholds, AgeGr
 
 ```
 
-From 1999 to 2012 the overall size of the race grew, and in fact more than doubled in size.  
 
 ```{r eda2, include=TRUE, echo=FALSE, fig.width=8.5, fig.height=4}
 #What about Total Race Size?
@@ -102,14 +112,13 @@ AllFinishers %>%
       geom_line(size=1) + theme_light() + 
       scale_color_manual(values=c("#4286f4", "#fc41e9")) + 
       theme(legend.position = "bottom") + 
-      scale_y_continuous( "Total Runners") +ggtitle("")
+      scale_y_continuous( "Total Runners", labels = comma) +ggtitle("Cherry Blossom 10 Mile Race - Participants by Gender, 1999-2012") 
 
 AllFinishers %>% 
   group_by(year) %>% 
     summarise(RunnerCount=n())
 ```
-
-While participation by men and women both grew substantially, participation women played the greatest role in the expansion of the field.  Women's participation comprised a minority, 42% of runners, but by 2012 had exchanged positions with men at 57.5% of all participants.  
+From 1999 to 2012 the overall size of the race grew, and in fact more than doubled in size.  While participation by men and women both grew substantially, participation by women played the greatest role in the expansion of the field.  Women's participation comprised a minority, 42% of runners, but by 2012 had exchanged positions with men at 57.5% of all participants.  The two genders were at parity levels of participation in 2005, and women have since added more than 5,000 participants.
 
 ```{r eda3, include=TRUE, echo=FALSE, fig.width=8.5, fig.height=4}
 #Have participants ages changed signfiicantly?
@@ -124,7 +133,7 @@ AllFinishers %>%
   facet_wrap(~sex, ncol=1)
 ```
 
-The age of male runners has declined since 1999, with an average age of 40.3 in 1999, declining to 37.8 in 2008, and stabilizing between 37 and 38 years of age since 2008.  The standard deviation of mens' ages has consistently been between 10 and 12 years.
+The age of male runners has declined since 1999, with an average age of 40.3 in 1999, declining to a minimum of 37.8 in 2008, and stabilizing between 37 and 38 years of age since 2008.  The standard deviation of mens' ages has consistently been between 10 and 12 years.
 
 Women participating in the race, however, have been consistently averaging between an average of 33 and 36 years old, without any consistent trend year over year. Standard deviation of age for women is about 9 years.
 
@@ -160,7 +169,7 @@ AllFinishers %>%
         theme(legend.position="bottom") + 
         scale_x_discrete(labels=c())
 ```
-Examination of this series of visualizations also allows an inference to the relationship of a runner's age to his finishing time that we will examine in greater detail.  The visualization includes the fastest running time for every age between 20 and 80, for each race between 1999 and 2012.  Excluding the youngest, and the oldest participants from our research, the running times seem to follow a pattern for men of peak performance in the early twenties, with steadily increasing times for the rest of life, and more steeply increasing times and slower performances from age 60 to 80.  Women seem to peak closer to thirty, with times slowing through their thirties and fourties and experiencing an earlier degradation in performance and a steepening curve through their fifties and beyond.
+Examination of this series of visualizations also allows an inference to the relationship of a runner's age to his finishing time that we will examine, and then model, in greater detail.  The visualization includes the fastest running time for every age between 20 and 80, for each race between 1999 and 2012.  Excluding the youngest, and the oldest participants from our research, the running times seem to follow a pattern for men of peak performance in the early twenties, with steadily increasing times for the rest of life, and more steeply increasing times and slower performances from age 60 to 80.  Women seem to peak closer to thirty, with times slowing through their thirties and fourties and experiencing an earlier degradation in performance and a steepening curve through their fifties and beyond.
 
 ```{r eda6, include = TRUE, echo = FALSE, fig.height=4, fig.width=8.5}
 TopFinisher <- AllFinishers %>% 
@@ -171,7 +180,7 @@ BestTimeYr <- AllFinishers %>%
                 group_by(age, sex, year) %>% 
                   summarise(BestInAgeTime = min(runTime))
 
-BestTimeYr %>% 
+BestTimeYr %>% filter(age %in% (20:80)) %>%
   ggplot(aes(x=age, y=BestInAgeTime, group=sex, color=sex)) + 
   geom_point(alpha=0.3) + 
   theme_light() + 
@@ -182,6 +191,10 @@ BestTimeYr %>%
   scale_x_continuous(limits=c(20,80)) + 
   scale_y_continuous("Best Performance by Age, 1999-2012")
 ```
+
+#### Modeling Mens' Finishing Times By Age
+
+Employing the LOESS regression method discussed in the methods section, we will create a model to predict the time of the first finishing male for each age between 20 years old and 80 years old.  The exclusion of younger and older ages is reflective of the lower participation rates, and higher level of variability in these ages finishing times.    
 
 ``` {r LOESS_analysis_setup}
 
@@ -220,7 +233,7 @@ BestTimesM %>% ggplot(aes(x=age, y=fastest, group=sex, color=sex)) + geom_line()
 #lines(x = BestTimesM$age, y = PredictedTimeM, col = "purple", lwd = 2)
 
 ```
-
+The LOESS regression results in a curve, that similar to what was shown in our exploration, predicting the best run time in a runner's late 20's, with a degrading performance annually through the rest of the runner's career.  The degradation of performance becomes more severe after age 68.  This model would also suggest that the best runners at age 20 and age 60 are equal in performance in the ten mile distance of the Cherry Blossom course.
 
 ```{r fig.width=8.5, fig.height=4}
 
@@ -286,6 +299,8 @@ qqplot(time99NormM, time12NormM, pch = 19, cex = 0.5,
 abline(a =0, b = 1, col="red", lwd = 2)
 par(mfrow=c(1,1))
 
+
+
 # mode of distributions for 1999 peak earlier than 2012
 # also tighter spread of times, indicates 1999 faster when
 # considering age based times
@@ -296,13 +311,18 @@ par(mfrow=c(1,1))
 hist(time99NormM)
 hist(time12NormM)
 
-AllNormTimes %>% ggplot(aes(x=NormRunTime)) + geom_histogram() + theme_light() + facet_wrap(~year) + scale_x_continuous("Normalized Run Time") + ggtitle("Histogram of Normalized Mens' Run Times, 1999 vs. 2012")
+AllNormTimes %>% ggplot(aes(x=NormRunTime , fill="#4286f4")) + geom_histogram() + theme_light() + facet_wrap(~year) + scale_x_continuous("Normalized Run Time") + ggtitle("Histogram of Normalized Mens' Run Times, 1999 vs. 2012") + theme(legend.position = "none") + scale_fill_manual(values=c("#4286f4"))
+```
 
+Again, as mentioned in the exploration, the number of runners in the 2012 race overall has increased significantly, but we also see a clear shift towards a larger median - moving from about 1.5 times the best run time for the runner's respective age, to 1.75 times the best run time for the runner's age.  This might signal that the growth of the race's field is mostly in the recreational category of runner - a casual athlete, as well as persons seeking to walk the race route.  The second statement seems well supported by the long tail distribution of 2012 runners.  In 1999, the race effectively cut-off at the 2.5 times best runner's time, while in 2012 the race extended beyond three times the best runner's time. 
+
+
+```{r}
 # t test show sig difference with 1999 being faster when accounting for age
 t.test(time99NormM, time12NormM)
 
 ```
-Again, as mentioned in the exploration, the number of runners in the 2012 race overall has increased significantly, but we also see a clear shift towards a larger median - moving from about 1.5 times the best run time for the runner's respective age, to 1.75 times the best run time for the runner's age.  This might signal that the growth of the race's field is mostly in the recreational category of runner - a casual athlete, as well as persons seeking to walk the race route.  The second statement seems well supported by the long tail distribution of 2012 runners.  In 1999, the race effectively cut-off at the 2.5 times best runner's time, while in 2012 the race extended beyond three times the best runner's time. 
+Male runners in 1999 were found to have a statisically significant difference from male runners in 2012 in the normalized for age run time.  Runners in 1999 were a mean of 0.12 faster than in 2012 (p<0.0001).  
 
 ``` {r women_1999v2012 fig.width = 8.5, fig.height=4}
 #i'M GOING TO DROP IN SAME VIZ FOR WOMEN LATER...it's the same code, just need to change it slightly
@@ -356,7 +376,7 @@ AllNormTimes<-data.frame(age=names(time99NormW), year="1999", NormRunTime=time99
 AllNormTimes<-rbind(AllNormTimes, data.frame(age=names(time12NormW), year="2012", NormRunTime=time12NormW))
 
 
-AllNormTimes %>% ggplot(aes(x=NormRunTime, color=year, group=year)) + geom_density(size=1) + theme_light() + theme(legend.position = "bottom") + ggtitle("Density of Normalized Run Time - Women, 1999 vs. 2012", subtitle = "Run Times Normalized to Fastest Time by Age over All Race Years")
+AllNormTimes %>% ggplot(aes(x=NormRunTime, color=year, group=year)) + geom_density(size=1) + theme_light() + theme(legend.position = "bottom") + ggtitle("Density of Normalized Run Time - Women, 1999 vs. 2012", subtitle = "Run Times Normalized to Fastest Time by Age over All Race Years") + scale_x_continuous("Normalized Run Time")
 
 
 ```
@@ -373,6 +393,10 @@ qqplot(time99NormW, time12NormW, pch = 19, cex = 0.5,
 abline(a =0, b = 1, col="red", lwd = 2)
 par(mfrow=c(1,1))
 
+```
+
+```{r}
+
 # women's times are quite similar comparing two years, 
 # however can see some pull for 2012 indicating slightly
 # slower age controlled times, esp in 2012, indicated by the longer
@@ -384,14 +408,21 @@ par(mfrow=c(1,1))
 hist(time99NormW)
 hist(time12NormW)
 
-AllNormTimes %>% ggplot(aes(x=NormRunTime)) + geom_histogram() + theme_light() + facet_wrap(~year) + scale_x_continuous("Normalized Run Time") + ggtitle("Histogram of Normalized Womens' Run Times, 1999 vs. 2012")
+AllNormTimes %>% ggplot(aes(x=NormRunTime, fill="#fc41e9")) + geom_histogram() + theme_light() + facet_wrap(~year) + scale_x_continuous("Normalized Run Time") + ggtitle("Histogram of Normalized Womens' Run Times, 1999 vs. 2012") + theme(legend.position = "none") + scale_fill_manual(values=c("#fc41e9"))
 
 
-# t test show sig difference with 1999 being faster when accounting for age
-t.test(time99NormW, time12NormW)
+
 ```
 
-The increase in the field size for women is dramatic, but interesting that in that it seems to exhibit more similarity in shape between 1999 and 2012.  
+The increase in the field size for women is dramatic and noticeable.  The distributions of womens' normalized run times is more similar between 1999 and 2012 than the distribution of the men was.  While additional results have been added to the tail of the distrbution, the overall length of the distribution has not changed in the same manner that the mens' times have.
+
+```{r}
+# t test show sig difference with 1999 being faster when accounting for age
+t.test(time99NormW, time12NormW)
+
+
+```
+A two sample Student's t-test finds a difference between the two years' women's race results, after standardizing for ages.  While there was a similar normalized  median, the difference of normalized mean running times is approximately 0.07 (p<0.0001).  
 
 ``` {r womenvmen_1999v2012 fig.width = 8.5, fig.height=4}
 # COMPARE BOTH GENDERS
@@ -513,7 +544,11 @@ Likewise, Race Organizers could benefit from deeper insight into their event for
 Fitness devices, and smart phone applications for fitness have become a standard for recreational runners.  
 
 ## References
-
+[1] – Anderson, Owens, “Running Science”, HumanKinetics.com, http://www.humankinetics.com/excerpts/excerpts/genes-and-running-performance.
+[2] - Tucker R., Noakes TD. “The Physiological Regulation of Pacing Strategy During Exercise: A Critical Review.”, British Journal of Sports Medicine, June 2009.
+[3] – Joyner, M. J., “Modeling: Optimal Marathon Performance on The Basis Of Physiological Factors.”, Journal of Applied Physiology, Feb 1991.
+[4] – Tucker R., “The Anticipatory Regulation of Performance: The Physiological Basis For Pacing Strategies And The Development Of A Perception-Based Model For Exercise Performance.”, British Journal of Sports Medicine, June 2009.
+[5] - http://www.runningusa.org/2017-us-road-race-trends
 
 ``` {r eda, include=FALSE}
 
