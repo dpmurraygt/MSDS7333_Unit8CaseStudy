@@ -48,7 +48,8 @@ source("src/make.R")
 #### to 0.25 to catch curves better but not too close fit. Adjusted some of your code but viz works
 #### there are a couple viz in EDA sections that call for an object you likely had in memory
 #### but is not in .RMD. Commented up for your writing purposes.
-```{r imputation, include=FALSE, echo=FALSE}
+```{r analysis_prep, include=FALSE, echo=FALSE}
+# DENNIS, THIS ENTIRE BLOCK HAS CHANGED, COPY/PASTE OVER OLD IMPUTATION
 #Combine men and women.  One Dataframe to rule them all.
 AllFinishers <- rbind(cbMen, cbWomen)
 
@@ -184,6 +185,7 @@ BestTimeYr %>%
 ```
 
 ``` {r LOESS_analysis_setup}
+# DENNIS, THIS ENTIRE BLOCK HAS CHANGED, COPY/PASTE OVER OLD LOESS_ANALYSIS_SETUP
 
 # split base datasets for gender analysis purposes
 
@@ -212,6 +214,8 @@ BestTimesW <- BestTimes[BestTimes$sex == "W",]
 ```
 
 ``` {r men_1999v2012}
+
+# DENNIS: CHANGE RUNMODELMEN SPAN TO 0.25 (AND CHANGE RUNMODELWOMEN BELOW)
 
 # use span of 0.25 instead of .75 to capture curvature better
 RunModelMen <- loess(fastest ~ age, data=BestTimesM, span=0.25)
@@ -286,6 +290,7 @@ t.test(time99NormM, time12NormM)
 ```
 
 ``` {r women_1999v2012}
+# DENNIS CHANGE RUNMODELWOMEN SPAN TO 0.25
 
 # use span of 0.25 instead of .75 to capture curvature better
 RunModelWomen <- loess(fastest ~ age, data=BestTimesW, span=0.25)
