@@ -13,6 +13,8 @@ output:
 library(dplyr)
 library(tidyr)
 library(ggplot2)
+library(ggthemes)
+library(scales)
 library(rvest)
 library(magrittr)
 library(XML)
@@ -48,6 +50,9 @@ source("src/make.R")
 #### there are a couple viz in EDA sections that call for an object you likely had in memory
 #### but is not in .RMD
 ```{r imputation, include=FALSE, echo=FALSE}
+cbMen2 <- load(file="Data/cbMen.rda")
+cbWomen2 <-load("Data/cbWomen.rda")
+
 #Combine men and women.  One Dataframe to rule them all.
 AllFinishers <- rbind(cbMen, cbWomen)
 
@@ -120,7 +125,10 @@ AllFinishersImp[which(is.na(AllFinishers$age)),]
 AgeGroupLabels <- c("Under 19", "20-24", "25-29", "30-34", "35-39", "40-44", "45-49", "50-54", "55-59", "60-64", "65-69", "70-79", "80 and up")
 AgeThresholds <- c(0, 19, 24, 29, 34, 39, 44, 49, 54, 59, 64, 69, 79, Inf)
 
-#AllFinishers <- AllFinishers %>% 
+AllFinishers <- AllFinishers %>% mutate(AgeGroup = cut(age, AgeThresholds, AgeGroupLabels)) %>%
+  group_by(year)  %>% mutate(OverallPlace = rank(runTime, ties.method="first")) %>%
+  group_by(year, sex) %>% mutate(GenderPlace = rank(runTime, ties.method="first")) %>% 
+  group_by(year, sex, AgeGroup) %>%  mutate(AgeGroupPlace = rank(runTime, ties.method="first")) %>% data.frame()
 
 ```
 
@@ -236,7 +244,7 @@ BestTimesM <- BestTimes[BestTimes$sex == "M",]
 BestTimesW <- BestTimes[BestTimes$sex == "W",]
 ```
 
-``` {r men_1999v2012}
+``` {r men_1999v2012 fig.width=8.5, fig.height=4}
 
 # use span of 0.5 instead of .75 to capture curvature better
 RunModelMen <- loess(fastest ~ age, data=BestTimesM, span=0.5)
@@ -245,9 +253,18 @@ PredictedTimeM <- predict(RunModelMen, newdata = BestTimesM$age)
 
 
 # plot fastest times by age - leaving all ages in right now
-plot(BestTimesM$fastest ~ BestTimesM$age, type ="l", xlim = c(20, 80))
+
+BestTimesM %>% ggplot(aes(x=age, y=fastest, group=sex, color=sex)) + geom_line() + theme_light() + ggtitle("Fastest Male Race Time Across 1999-2012") + scale_x_continuous("Age") + scale_y_continuous("Run Time in Minutes") + geom_smooth(method = "loess") + scale_color_manual(values = c("#4286f4"))
+
+#plot(BestTimesM$fastest ~ BestTimesM$age, type ="l", xlim = c(20, 80))
 # smooth out fastest times
-lines(x = BestTimesM$age, y = PredictedTimeM, col = "purple", lwd = 2)
+#lines(x = BestTimesM$age, y = PredictedTimeM, col = "purple", lwd = 2)
+
+```
+
+
+```{r fig.width=8.5, fig.height=4}
+
 
 # normalize all times based on fastest time predictions per instructions
 names(PredictedTimeM) = BestTimesM$age
@@ -276,12 +293,27 @@ plot(density(100*time99NormM, na.rm = TRUE),
      main = "Time Distribution for Male Runners
             Percentage of the Fastest Runner for a Given Age",
      cex.main = 0.8, cex.lab = 0.8, cex.axis = 0.8)
-
 lines(density(100*time12NormM, na.rm = TRUE), 
           lwd = 3, col = "green")
 
 legend("topleft", fill = c("purple", "green"),
        legend = c("1999", "2012"), bty = "n", cex=0.8)
+
+
+
+AllNormTimes<-data.frame(age=names(time99NormM), year="1999", NormRunTime=time99NormM)
+AllNormTimes<-rbind(AllNormTimes, data.frame(age=names(time12NormM), year="2012", NormRunTime=time12NormM))
+
+
+AllNormTimes %>% ggplot(aes(x=NormRunTime, color=year, group=year)) + geom_density(size=1) + theme_light() + theme(legend.position = "bottom") + ggtitle("Density of Normalized Run Time - Men, 1999 vs. 2012", subtitle = "Run Times Normalized to Fastest Time by Age over All Race Years")
+
+```
+Reviewing the density plot, the 1999 is shown to be centered just above 1.5 times the fastest runner's time for the respective age group.  2012 is centered closer to 1.75 times the fastest runner's time.  2012 also exhibits a wider, flatter curve with a less prominent median normalized run time.
+
+```{r fig.width=8.5, fig.height=4}
+
+
+
 
 # 2012 age controlled times are definitely slower, 
 # runners generally ran slower for their age grps
@@ -305,13 +337,16 @@ par(mfrow=c(1,1))
 hist(time99NormM)
 hist(time12NormM)
 
+AllNormTimes %>% ggplot(aes(x=NormRunTime)) + geom_histogram() + theme_light() + facet_wrap(~year) + scale_x_continuous("Normalized Run Time") + ggtitle("Histogram of Normalized Mens' Run Times, 1999 vs. 2012")
+
 # t test show sig difference with 1999 being faster when accounting for age
 t.test(time99NormM, time12NormM)
 
 ```
+Again, as mentioned in the exploration, the number of runners in the 2012 race overall has increased significantly, but we also see a clear shift towards a larger median - moving from about 1.5 times the best run time for the runner's respective age, to 1.75 times the best run time for the runner's age.  This might signal that the growth of the race's field is mostly in the recreational category of runner - a casual athlete, as well as persons seeking to walk the race route.  The second statement seems well supported by the long tail distribution of 2012 runners.  In 1999, the race effectively cut-off at the 2.5 times best runner's time, while in 2012 the race extended beyond three times the best runner's time. 
 
-``` {r women_1999v2012}
-
+``` {r women_1999v2012 fig.width = 8.5, fig.height=4}
+#i'M GOING TO DROP IN SAME VIZ FOR WOMEN LATER...it's the same code, just need to change it slightly
 # use span of 0.5 instead of .75 to capture curvature better
 RunModelWomen <- loess(fastest ~ age, data=BestTimesW, span=0.5)
 # smooth times out, returns vector of times for each age
@@ -355,6 +390,19 @@ legend("topleft", fill = c("purple", "green"),
        legend = c("1999", "2012"), bty = "n",
        cex= 0.8)
 
+AllNormTimes<-data.frame(age=names(time99NormW), year="1999", NormRunTime=time99NormW)
+AllNormTimes<-rbind(AllNormTimes, data.frame(age=names(time12NormW), year="2012", NormRunTime=time12NormW))
+
+
+AllNormTimes %>% ggplot(aes(x=NormRunTime, color=year, group=year)) + geom_density(size=1) + theme_light() + theme(legend.position = "bottom") + ggtitle("Density of Normalized Run Time - Women, 1999 vs. 2012", subtitle = "Run Times Normalized to Fastest Time by Age over All Race Years")
+
+
+```
+Women's times show less of a change from 1999 to 2012, but still exhibit some flattening of the center.  
+
+```{r fig.width = 8.5, fig.height=4}
+
+
 qqplot(time99NormW, time12NormW, pch = 19, cex = 0.5, 
        xlab = "Age Normalized Time - 1999",
        ylab = "Age Normalized Time - 2012", 
@@ -374,11 +422,16 @@ par(mfrow=c(1,1))
 hist(time99NormW)
 hist(time12NormW)
 
+AllNormTimes %>% ggplot(aes(x=NormRunTime)) + geom_histogram() + theme_light() + facet_wrap(~year) + scale_x_continuous("Normalized Run Time") + ggtitle("Histogram of Normalized Womens' Run Times, 1999 vs. 2012")
+
+
 # t test show sig difference with 1999 being faster when accounting for age
 t.test(time99NormW, time12NormW)
 ```
 
-``` {r womenvmen_1999v2012}
+The increase in the field size for women is dramatic, but interesting that in that it seems to exhibit more similarity in shape between 1999 and 2012.  
+
+``` {r womenvmen_1999v2012 fig.width = 8.5, fig.height=4}
 # COMPARE BOTH GENDERS
 
 # Party like it's 1999 - compare normalized times between genders
