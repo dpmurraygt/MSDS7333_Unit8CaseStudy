@@ -1,16 +1,17 @@
 ---
-title: 'Modeling Runners Times (update this title)'
-author: "Dennis Murray, Jared Law, Julien Battaillard, Cory Nichols"
-section: "MSDS 7333-403 - Quantifying the World - Case Study 4 (Unit 8)"
+title: "Modeling Runners Times (update this title)"
+author: "Dennis Murray, Jared Law, Julien Bataillard, Cory Nichols"
 date: "March 6th, 2018"
-output: 
+output:
+  html_document:
+    df_print: paged
   word_document:
-    #reference_docx: word-styles-reference-01.docx
     fig_caption: yes
+section: MSDS 7333-403 - Quantifying the World - Case Study 4 (Unit 8)
 ---
 
 ```{r load_libs, echo=FALSE, include=FALSE}
-library(dplyr)
+#library(dplyr)
 library(tidyr)
 library(ggplot2)
 library(rvest)
@@ -21,7 +22,7 @@ library(maps)
 ```
 
 ```{r setup, echo=FALSE, include=FALSE}
-dir <- "~/DataScience/SMU/QTW/Unit8/Unit8_CaseStudy/"
+dir <- "C:/Users/Julien/Documents/Git/MSDS7333_Unit08"
 setwd(dir)
 knitr::opts_knit$set(root.dir = dir)
 knitr::opts_chunk$set(echo = FALSE)
@@ -34,11 +35,36 @@ source("src/make.R")
 
 ## Abstract
 
+Nowadays, thanks to the rapid expansion of the internet, there is a massive quantity of free data available online. Scraping and analyzing this data can bring some insights into a problem or bring a different perspective to solve that problem. An example of easily obtainable data is the Cherry Blossom Ten Mile run. Started in 1973, the race is held in Washington DC. Every year, the organizers publish the results online. In this paper we first discuss how to scrape and clean up the data for the years 1999 to 2012. We then run a statistical analysis and investigate the times of the runners over the years for both men and women. The results show that …
+
 ## Introduction
 
 ## Literature Review
 
 ## Methods
+
+After downloading all the files available for both the men and women’s results from 1999 to 2012 we observed that the documents had different formats over the years. Before running our analysis, some major data cleanup needs to take place. The next few paragraphs will go over several format differences from one file to the next and how the issues were addressed using R. 
+
+An easy way to read certain lines within a text file directly from the R command window is with the command “readLines”. One can store the whole file in a variable and then read specific lines that need to be examined. 
+After inspecting all files, we can itemize the minimum requirements:
+-	Each file has column headers for ranking, name, age, hometown, and time. 
+-	Each column header is underlined by equal signs. 
+-	Some of the files include extra lines at the top and bottom of the document. 
+-	Some years include both the net time and the gun time, but we’ll only use the net time. 
+-	For any missing entry, use N/A. 
+
+We need to ensure that all the column headers are the same from year to year. For example, the column for age is labeled as “Ag” or “ag”. The R function “tolower” fixes this quickly by changing all column headers to lower case letters.
+
+The width of the columns might be different from file to file, so our code needs to be generalized to all files. In the “equal signs” row (the underline for the headers), we’ll use the position of the “blanks” to find the exact location of the columns for each file and store these numerical values in an array. 
+
+We also observed that the 2003 Men’s file has an added blank space in front of the numeric value for age. Basically, the age column does not align correctly with the “equal signs” row for the age variable. Since the location of each variable is stored in an array, we can easily shift the index by one to resolve this issue. This fix also applies to the 2006 Men’s file which had a similar issue. 
+
+Some entries show runners that finished the race with an age of zero. Clearly the ages were missing and the “0’s” were added instead of “N/A’s” so these can be changed without difficulty. 
+
+As for the runtime, the variable is given in hours, minutes, and seconds. For simplicity we transformed it to minutes only. There were a few entries we had to remove as some runners did not finish the race and their corresponding times were given as “#”, “*”, or a blank space. 
+
+After all these edits were made, the files were read and the data was stored in a data frame with the following variables: year, sex, name, age, hometown, and runtime. 
+
 
 ## Results
 
