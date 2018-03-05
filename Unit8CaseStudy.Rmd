@@ -11,7 +11,7 @@ section: MSDS 7333-403 - Quantifying the World - Case Study 4 (Unit 8)
 ---
 
 ```{r load_libs, echo=FALSE, include=FALSE}
-#library(dplyr)
+library(dplyr)
 library(tidyr)
 library(ggplot2)
 library(ggthemes)
@@ -24,7 +24,7 @@ library(maps)
 ```
 
 ```{r setup, echo=FALSE, include=FALSE}
-dir <- "C:/Users/Julien/Documents/Git/MSDS7333_Unit08"
+dir <- "~/DataScience/SMU/QTW/Unit8/Unit8_CaseStudy/"
 setwd(dir)
 knitr::opts_knit$set(root.dir = dir)
 knitr::opts_chunk$set(echo = FALSE)
@@ -37,19 +37,31 @@ source("src/make.R")
 
 ## Abstract
 
-Nowadays, thanks to the rapid expansion of the internet, there is a massive quantity of free data available online. Scraping and analyzing this data can bring some insights into a problem or bring a different perspective to solve that problem. An example of easily obtainable data is the Cherry Blossom Ten Mile run. Started in 1973, the race is held in Washington DC. Every year, the organizers publish the results online. In this paper we first discuss how to scrape and clean up the data for the years 1999 to 2012. We then run a statistical analysis and investigate the times of the runners over the years for both men and women. The results show that …
+Participation in competitive running has increased dramtically in the past two decades. Simultaneously, the rapid expansion of the Internet has resulted in massive quantities of data now freely available online. Given the appropriate tools, acquiring running data stored on a website is now a trivial task. In this paper, we analyze the performance of runners in the Cherry Blossom Ten Mile Run held annually in Washington, DC. Performance data is acquired by scraping the Cherryblossom.org race result archives for 1999 to 2012. We compare age-normalized race results for 1999 and 2012 men and women. Results show that 1999 runners performed better when using age grading. Further, men typically outperformed women in both years considered.
 
 ## Introduction
-The sport of running hsa experienced a large expansion of active participants since the popular inception of the sport.  While major events like the Boston Marathon have staged competitions for more than 100 years, the modern day sport saw a significant expansion of participation since 1970, and especially since 1995.
-The Cherry Blossom Ten Mile Race in Washington, DC has held annual races since 1973.  The races from the period of 1999 until 2012 have highly accessible results files available on the web, and display the results of runners at all levels of skill.
-The race has expanded in the number of entrants, both male and female, over this 13 year period.  The expansion of participants could be reflective of several overall trends.  Over this time, interest in fitness activities has expanded.  Overall participation in races expanded from 7 million in 1995 to almost 16 million in 2012[5].
-The research in this paper seeks to understand the difference for the field of both genders' performance in the event, controlling for age, between 1999 and 2012.  It is of interest to discover whether the increase in field size is of runners of all skill levels, or if the trend may signal expansion of the sport towards the general public and generally away from the elite sub-population of runners.
-We will first review available literature on the topic of performance modeling, then discuss methods for modeling, present an exploration of the data and results of the modeling for performance.  Our paper will conclude with a discussion of the applications of performance modeling in the increasingly data-driven world of personal fitness.
+
+The sport of running continues to grow rapidly. While major events like the Boston Marathon have staged competitions for more than 100 years, the modern day sport of running has seen a significant expansion of runner participation since 1995. Overall participation in races around the United States expanded from 7 million in 1995 to almost 16 million in 2012 (5). 
+
+The Cherry Blossom Ten Mile Race in Washington, D.C. represents a microcosm of the upward participation trend in running. Between the period of 1999 and 2012, participation has tripled. Runners of all ages and skill levels participate in the race each year. 
+
+The objective of any runner is to minimize his or her overall run time. However, age and run times have typically displayed a positive relationship. In order to account for this degradation in performance as participants age, run times are often normalized by the world record time for a given age or age group. This process, known as "age grading", is used as a performance standard in competitive running (1).
+
+Race results for the 1999 to 2012 period are accessible in HTML tables at Cherryblossom.org. While we explore overall trends and runner characteristics, our objective is to compare the distribution of age normalized run times for 1999 and 2012. Addtionally, we compare gender times for each year.
+
+It is of secondary interest to discover whether the increase in field size is of runners of all skill levels, or if the trend may signal expansion of the sport towards the general public and generally away from the elite sub-population of runners.
+
+We will review available literature on the topic of running performance and explore overall participation and performance trends from 1999 to 2012. We will discuss the methods used to compare 1999 to 2012 results for men and women and compare results. Our paper will conclude with a discussion of the applications of performance modeling in the increasingly data-driven world of personal fitness.
 
 ## Literature Review
-Modeling human running performance over time has been a topic for some time in medical, sports and evolutionary journals.  These reviews and studies have been conducted in order to more accurately determine where the human ability to do long distance running came from, how are bodies are made for such running, and the current impacts of diet and training in increasing speeds.  Ultimately, the data from the Cherry blossom race show the increasing popularity of long distance running, and the overall factors that age plays in modeling performance.
-Despite these factors, one of the leading researchers on the subject, Dr. Owen Anderson, showed through multiple studies looking at both hereditary and environmental effects that both are contributing factors to the overall increase in human performance over time; however, no definitive proof could be given as to the level of impact each had on a runner’s performance. [1]
-Further studies have confirmed that the overall impact of human physiology is unique to that of running, or at least having the ability to run; and that despite all of the play that one’s own environment has, it is never enough to fully get over our own physiology. [3][4] There are limits that are warned about, stating that the level of performance one can obtain is limited by physiological factors, and no matter how much diet or training is conducted, harm will come to the athlete who tries to go beyond those limits.[2]  In the Cherry Blossom data, it shows that while there is a net performance gain over time, but physiological (as shown by the difference between the overall ages, gender and performance time) factors are the limit in human running performance.
+
+Modeling human running performance over time has been a classical topic in medical, sports and evolutionary journals.  These studies have been conducted in order to more accurately determine where the human ability for long distance running originated, how bodies predisposed to running, and the current impacts of diet and training in speed training. Ultimately, the data from the Cherry Blossom race shows the increasing popularity of long distance running, and the overall factors that age plays in modeling performance.
+
+One of the leading researchers on the subject of runner performance, Dr. Owen Anderson, showed both hereditary and environmental effects contribute to overall runner performance. However, no definitive proof could be given as to the level of impact each had on a runner’s performance (xxxx 1).
+
+Further studies have shown that the physical predisposition and genetics are major factors affecting the ability to run. Despite training and envrionmental factors, it is never enough to fully overcome physiology and detrimental effects aging has on running ability (3,4). 
+
+There are limits that are warned about, stating that the level of performance one can obtain is limited by physiological factors, and no matter how much diet or training is conducted, harm will come to the athlete who tries to go beyond those limits (2). In the Cherry Blossom data, it shows that while there is a net performance gain over time, but physiological (as shown by the difference between the overall ages, gender and performance time) factors are the limit in human running performance.
 
 
 ## Methods
