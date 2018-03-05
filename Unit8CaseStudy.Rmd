@@ -192,7 +192,7 @@ AllFinishers %>%
   facet_wrap(~sex, ncol=1)
 ```
 
-The finish time for the best male participant for this ten mile event have improved consistently from 2008 to 2012, with times approaching 45 minutes. Womens' times have been more static, with the exception of a 4 year run of times from 2004 to 2007. Based on the correlation between age and performance, the improvement in mens' times could be affected by the overall decrease in average age.
+The finish time for the best male participant for this ten mile event has improved consistently from 2008 to 2012, with times approaching 45 minutes. Womens' times have been more static, with the exception of a 4 year run of times from 2004 to 2007. Based on the correlation between age and performance, the improvement in mens' times could be affected by the overall decrease in average age.
 
 ```{r eda_gender_place, include = TRUE, echo = FALSE, fig.width = 8.5, fig.height = 4}
 # needs GenderPlace
@@ -228,9 +228,9 @@ AllFinishers %>%
         ggtitle("Figure 4: Age Group Top Performances by Year")
 ```
 
-There may also be some inference made about sudden changes in the winning times for age groups.  The increase of the winning time in the 30-34 age group in the 2011 and 2012 races could signal a key competitor has aged out of the group - and indeed, we see the 35-39 age group for men taking a sudden drop in winning time in 2011 and 2012. While the race size overall is large, there could be a few elite competitors that set the pace for most of the age groups.
+There may also be some inference made about sudden changes in the winning times for age groups.  The increase of the winning time in the 30-34 age group in the 2011 and 2012 races could signal a key competitor has aged out of the group. Indeed, we see the 35-39 age group for men taking a sudden drop in winning time in 2011 and 2012. While the race size overall is large, there could be a few elite competitors that set the pace for most of the age groups.
 
-Examination of Figure 5 allows for an inference to the relationship of age to finishing time that we will examine and model. The visualization includes the fastest running time for every age between 20 and 80, for each race between 1999 and 2012.  Excluding the youngest, and the oldest participants from our research, the running times seem to follow a pattern for men of peak performance in the early twenties, with steadily increasing times for the rest of life, and more steeply increasing times and slower performances from age 60 to 80.  Women seem to peak closer to thirty, with times slowing through their thirties and fourties and experiencing an earlier degradation in performance and a steepening curve through their fifties and beyond.
+Examination of Figure 5 allows for another inference to the relationship between age and run time. The visualizations show the fastest running time for every age between 20 and 80 by gender. Excluding the youngest and oldest participants from our research, running times for men peak in the early twenties, with steadily increasing times for the rest of life. Women peak closer to thirty, with times slowing through their thirties and fourties. Both genders' run times display non-linear relationships when considering age, especially as age increases.
 
 ```{r eda_lead_runners, include = TRUE, echo = FALSE, fig.height=4, fig.width=8.5}
 TopFinisher <- AllFinishers %>% 
@@ -238,24 +238,28 @@ TopFinisher <- AllFinishers %>%
                   mutate(BestInAgeTime = min(runTime), WorstInAgeGroup = max(runTime)) 
 
 BestTimeYr <- AllFinishers %>% 
-                group_by(age, sex, year) %>% 
+                group_by(age, sex) %>% 
                   summarise(BestInAgeTime = min(runTime))
 
 BestTimeYr %>% 
   filter(age %in% (20:80)) %>%
     ggplot(aes(x=age, y=BestInAgeTime, group=sex, color=sex)) + 
-    geom_point(alpha=0.3) + 
+    geom_line() + 
     theme_light() + 
     scale_color_manual(values=c("#4286f4", "#fc41e9")) + 
     facet_wrap(~sex) + 
-    geom_smooth(method="loess") + 
+    #geom_smooth(method="loess") + 
     theme(legend.position = "bottom") + 
-    ggtitle("Figure 5: Fastest Time by Age by Gender, 1999-2012") + 
+    ggtitle("Figure 5: Fastest Time by Age and Gender") + 
     scale_x_continuous(limits=c(20,80)) + 
-    scale_y_continuous("Best Performance by Age, 1999-2012")
+    scale_y_continuous("Best Performance by Age")
 ```
 
-Given visual evidence of the positive relationship between age and running performance, we implement an age grading method to compare the 1999 race results to the 2012 race results. Age grading allows us to objectively determine differences between two race results by controlling for the effect age has on running. Additionally, in order to smooth out the fastest times recorded for ages with smaller numbers of participants, we apply a local regression (LOESS) method to predict fastest times. This allows for a more consistent analysis and helps to control outliers given our dataset is small in comparison to the population of times for all races around the world. This smoothing can be seen for men in Figure 6.
+This relationship between age and performance is a natural phenomenon known well by competitive runners. To account for this phenomenon, age grading is used for ranking runners performance based on their age. In fact, age graded performance is more frequently used for runner comparisons. Runnersworld.com describes age grading as "a way of putting all race participants on a level playing field, regardless of age or gender. (3)" In age grading, a runner's time is "graded" or normalized based on the world record time for his or her age. 
+
+Given overwhelming visual evidence of the positive relationship between age and running performance, we implement an age grading method to compare the 1999 results to the 2012 race results for the Cherry Blossom Ten Mile Run. We use the fastest times recorded for each age considering the time span of 1999 to 2012. Many of these times are fairly close to world record times for 10 mile runs. Additionally, we apply a local regression (LOESS) model to predict the fastest times. LOESS is a non-parametric local regression implementation that uses a subset of data to fit individual regression models. This method allows for complex curve fitting. In our case, it takes some of the noise out of the data we use to normalize run times in order to create age grades.
+
+We use the raw fastest times and ages to fit the LOESS model. By predicting the fastest times for the ages we are interested in, we are able to smooth the data. Using predicted times helps control for outliers and minimize year to year fluctuations in our dataset. We use these predicted fastest times to age grade each run time in 1999 and 2012, the two years we are interested in comparing. 
 
 ``` {r LOESS_analysis_setup, include = FALSE}
 
@@ -278,42 +282,40 @@ AllFinishersW <- AllFinishers[AllFinishers$sex == "W",]
 
 # get best times for both men and women to use in LOESS smoothing
 BestTimes <- AllFinishers %>%
-             group_by(sex, age) %>%
-             summarise(fastest=min(runTime))
+              group_by(sex, age) %>%
+                summarise(fastest=min(runTime))
 
 BestTimesM <- BestTimes[BestTimes$sex == "M",]
 BestTimesW <- BestTimes[BestTimes$sex == "W",]
 ```
 
-``` {r men_1999to2012, fig.width=8.5, fig.height=4}
+``` {r men_1999to2012, include=TRUE, fig.width=8.5, fig.height=4}
 
 # use span of 0.25 instead of .75 to capture curvature better
 RunModelMen <- loess(fastest ~ age, data=BestTimesM, span=0.25)
+RunModelWomen <- loess(fastest ~ age, data=BestTimesW, span=0.25)
 # smooth times out, returns vector of times for each age, use all ages
 PredictedTimeM <- predict(RunModelMen, newdata = BestTimesM$age)
+PredictedTimeW <- predict(RunModelWomen, newdata = BestTimesW$age)
 
+predTimes<-rbind(data.frame(predicted=PredictedTimeM),
+            data.frame(predicted=PredictedTimeW))
 
-# plot fastest times by age - leaving all ages in right now
-
-BestTimesM %>% 
-  ggplot(aes(x=age, y=fastest)) + 
-  geom_line(aes(col="Raw Results"), show.legend=TRUE) + 
+cbind.data.frame(BestTimes, predTimes) %>% 
+  ggplot(aes(x=age)) + 
+  geom_line(aes(y=fastest, group=sex, color=sex), size=1, alpha = 0.5) +
+  geom_line(aes(y=predicted, color=" Predicted")) +
   theme_light() + 
-  ggtitle("Figure 6: Fastest Male Race Times - 1999 to 2012") + 
+  ggtitle("Figure 6: Fastest Race Times with Smoothing Using LOESS") + 
   scale_x_continuous("Age") + 
-  scale_y_continuous("Run Time in Minutes") + 
-  geom_line(aes(x=age, y=PredictedTimeM, col="LOESS Predicted Results"), show.legend = TRUE)+
-  #geom_smooth(method = "loess") + this is fitting @ .75
-  scale_color_manual(values = c("red", "#4286f4")) + 
-  theme(legend.position="bottom", legend.title=element_blank())
-
-#plot(BestTimesM$fastest ~ BestTimesM$age, type ="l", xlim = c(20, 80))
-# smooth out fastest times
-#lines(x = BestTimesM$age, y = PredictedTimeM, col = "purple", lwd = 2)
-
+  scale_y_continuous("Run Time in Minutes") +
+  facet_wrap(~sex)+
+  scale_color_manual(values=c("black", "#4286f4","#fc41e9"))+
+  theme(legend.position="bottom", 
+        legend.title=element_blank())
 ```
 
-We standardize run times by dividing by the fastest predicted time for all valid ages competing in the Cherry Blossom Ten Mile Run. In order to obtain the fastest times, we consider the entire time span of 1999 to 2012. Further, only times for ages greater than 11 and less than 81 are used. The Cherry Blossom Race requires runners to be at least 12 years old and data for individuals older than 80 is extremely sparse. As an example of standardization, a runner who is 33 with a finish time of 75 minutes in the 10 mile run would have a standardized time of (75/57) 1.32 given a predicted fastest time of 57 minutes for the age 33 category.
+To compute age graded run times, we normalize raw run times in 1999 and 2012 by dividing by the fastest predicted time for all valid ages. Only times for ages greater than 11 and less than 81 are used. The Cherry Blossom Race requires all ten mile runners to be at least 12 years old and data for individuals older than 80 is extremely sparse. For example, a runner who is 33 with a finish time of 75 minutes would have a standardized time of (75/57) 1.32 given a predicted fastest time of 57 minutes for his age category.
 
 ## Results of Age Grading Analysis
 
@@ -324,6 +326,23 @@ Employing the LOESS regression method discussed in the methods section, we will 
 The LOESS regression results in a curve similar to what was shown in our previous data exploration. predicting the best run time in a runner's late 20's, with a degrading performance annually through the rest of the runner's career.  The degradation of performance becomes more severe after age 68.  This model would also suggest that the best runners at age 15 and age 60 are equal in performance in the ten mile distance of the Cherry Blossom course. However, this is likely to be an anomaly given much fewer runners in the 15 and under age group.
 
 ```{r normalize_men, fig.width=8.5, fig.height=4, eval=FALSE}
+
+
+# plot fastest times by age - leaving all ages in right now
+
+BestTimesM %>% 
+  ggplot(aes(x=age, y=fastest)) + 
+  geom_line(aes(col="Raw Results"), show.legend=TRUE) + 
+  geom_line(aes(x=age, y=PredictedTimeM, col="LOESS Predicted Results"), show.legend = TRUE)+
+  theme_light() + 
+  ggtitle("Figure 7: Fastest Race Times for Men with Smoothing") + 
+  scale_x_continuous("Age") + 
+  scale_y_continuous("Run Time in Minutes") + 
+  #geom_smooth(method = "loess") + this is fitting @ .75
+  scale_color_manual(values = c("red", "#4286f4")) + 
+  theme(legend.position="bottom", 
+        legend.title=element_blank())
+
 
 # normalize all times based on fastest time predictions per instructions
 names(PredictedTimeM) = BestTimesM$age
