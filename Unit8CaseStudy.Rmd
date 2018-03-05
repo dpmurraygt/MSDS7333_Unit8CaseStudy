@@ -405,8 +405,9 @@ t.test(time99NormM, time12NormM)
 In fact, male runners in 1999 were found to have a statisically significant difference from male runners in 2012 in the normalized for age run time.  Runners in 1999 were a mean of 0.12 faster than in 2012 (p<0.0001).  
 
 
-#### Modeling Womens' Finishing Times by Age
-We will also model, and compare womens' run times between 1999 and 2012 using the same LOESS Regression technique to build a model to predict the fastest woman finisher's time for each age between 20 years old and 80 years old.
+#### Comparing Womens' Run Times for 1999 and 2012
+
+We will also compare womens' run times between 1999 and 2012 using the same LOESS Regression technique to build a model to predict the fastest woman finisher's time for each age between 20 years old and 80 years old.
 
 ``` {r women_1999v2012, eval=FALSE}
 # use span of 0.5 instead of .75 to capture curvature better
@@ -631,8 +632,6 @@ AllPredicted %>% ggplot(aes(x=age, y=time, group=sex, color=sex)) +
 ```
 
 
-
-
 ## Future Work and Conclusions
 The comparison of the results of the Cherry Blossom Ten Mile Race between 1999 and 2012 has led to several interesting insights.  
 
@@ -649,11 +648,14 @@ Likewise, Race Organizers could benefit from deeper insight into their event for
 Fitness devices, and smart phone applications for fitness have become a standard for recreational runners.  Predictive pacing could hold a competitive advantage to a device that helps an athlete train smarter.
 
 ## References
-[1] – Anderson, Owens, “Running Science”, HumanKinetics.com, http://www.humankinetics.com/excerpts/excerpts/genes-and-running-performance.
-[2] - Tucker R., Noakes TD. “The Physiological Regulation of Pacing Strategy During Exercise: A Critical Review.”, British Journal of Sports Medicine, June 2009.
-[3] – Joyner, M. J., “Modeling: Optimal Marathon Performance on The Basis Of Physiological Factors.”, Journal of Applied Physiology, Feb 1991.
-[4] – Tucker R., “The Anticipatory Regulation of Performance: The Physiological Basis For Pacing Strategies And The Development Of A Perception-Based Model For Exercise Performance.”, British Journal of Sports Medicine, June 2009.
+[1] Anderson, Owens, “Running Science”, HumanKinetics.com, http://www.humankinetics.com/excerpts/excerpts/genes-and-running-performance.
+[2] Tucker R., Noakes TD. “The Physiological Regulation of Pacing Strategy During Exercise: A Critical Review.”, British Journal of Sports Medicine, June 2009.
+[3] Joyner, M. J., “Modeling: Optimal Marathon Performance on The Basis Of Physiological Factors.”, Journal of Applied Physiology, Feb 1991.
+[4] Tucker R., “The Anticipatory Regulation of Performance: The Physiological Basis For Pacing Strategies And The Development Of A Perception-Based Model For Exercise Performance.”, British Journal of Sports Medicine, June 2009.
 [5] - http://www.runningusa.org/2017-us-road-race-trends
+
+
+# APPENDIX - BOOK CODE
 
 ``` {r eda_old, include=FALSE, eval=FALSE}
 
@@ -713,7 +715,6 @@ plot(cbMenSub$runTime ~ ageCat,
      xlab = "Age (years)", ylab = "Run Time (minutes)")
 
 ```
-
 ```{r lm_avg_performance, include=FALSE, eval=FALSE}
 
 # fit a simple linear regression model
@@ -815,7 +816,6 @@ legend("topleft", col = c("purple", "green"),
 # piecewise not able to capture over 70 because we didnt hinge on it
 
 ```
-
 ``` {r runner_composition, include=FALSE, eval=FALSE}
 numRunners = with(cbMen, tapply(runTime, year, length))
 # number of runners more than doubled from 1999 to 2012
@@ -876,7 +876,6 @@ gap14 = mR.lo.pr12 - mR.lo.pr99
 plot(gap14 ~ age20to80, type = "l" , xlab = "Age (years)", 
      ylab = "Difference in Fitted Curves (minutes)", lwd = 2)
 ```
-
 ``` {r case_analysis, include=FALSE, eval=FALSE}
 # EXTRA CREDIT
 # imputation with random forest missForest
@@ -1060,8 +1059,6 @@ abline(a = 0, b = 1, col="red", lwd = 2)
 
 
 ```
-
-
 ``` {r following_runners, include=FALSE, eval=FALSE}
 #this iterates over a character vector to eliminate beginning blanks, trailing blanks
 # and then replace > 1 middle blanks with a single blank
@@ -1284,13 +1281,6 @@ lines(x = ageV, y = predV, lwd = 3, lty = 2, col = "#4daf4a")
 par(oldPar)
 dev.off()
 ```
-
-
-
-
-
-# APPENDIX - BOOK CODE
-
 ```{r web_scraping, include=FALSE, echo=FALSE, eval=FALSE}
 # Section 2.7 Parsing
 #ubase = "http://www.cherryblossom.org/"
@@ -1418,7 +1408,6 @@ extractResTable =
     writeLines(els, con = file)
   }
 ```
-
 ```{r data_munging, include=FALSE, eval=FALSE}
 # Nolan and Temple Lang Ch. 2
 
@@ -1598,7 +1587,6 @@ womenResMat = lapply(womenFiles, extractVariables)
 length(womenResMat) # 14, good
 sapply(womenResMat, nrow)  # some nulls fell out but overall data intact
 ```
-
 ```{r data_cleaning, include=FALSE, eval=FALSE}
 # ADJUSTED AND PART OF MAKE FILE
 # keep track of year and sex, clean variables
