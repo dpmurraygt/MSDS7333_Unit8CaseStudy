@@ -173,7 +173,7 @@ AllFinishers %>%
 #    summarise(RunnerCount=n())
 ```
 
-The age of male runners has declined since 1999, with an average age of 40.3 in 1999, declining to a minimum of 37.8 in 2008. The standard deviation of mens' ages has consistently hovered between 10 and 12 years.
+The age of male runners has declined since 1999, with an average age of 40.3 in 1999, declining to a minimum of 37.8 in 2008. The standard deviation of male ages has consistently hovered between 10 and 12 years.
 
 Women participating in the race, however, have been consistently averaging between an average of 33 and 36 years old, without any consistent trend year over year. Standard deviation of age for women is about 9 years.
 
@@ -192,7 +192,7 @@ AllFinishers %>%
   facet_wrap(~sex, ncol=1)
 ```
 
-The finish time for the best male participant for this ten mile event has improved consistently from 2008 to 2012, with times approaching 45 minutes. Womens' times have been more static, with the exception of a 4 year run of times from 2004 to 2007. Based on the correlation between age and performance, the improvement in mens' times could be affected by the overall decrease in average age.
+The finish time for the best male participant for this ten mile event has improved consistently from 2008 to 2012, with times approaching 45 minutes. Women's times have been more static, with the exception of a 4 year run of times from 2004 to 2007. Based on the correlation between age and performance, the improvement in men's times could be affected by the overall decrease in average age.
 
 ```{r eda_gender_place, include = TRUE, echo = FALSE, fig.width = 8.5, fig.height = 4}
 # needs GenderPlace
@@ -291,7 +291,7 @@ BestTimesM <- BestTimes[BestTimes$sex == "M",]
 BestTimesW <- BestTimes[BestTimes$sex == "W",]
 ```
 
-``` {r men_1999to2012, include=TRUE, fig.width=8.5, fig.height=4}
+``` {r 1999to2012, include=TRUE, fig.width=8.5, fig.height=4}
 
 # use span of 0.25 instead of .75 to capture curvature better
 RunModelMen <- loess(fastest ~ age, data=BestTimesM, span=0.25)
@@ -323,7 +323,7 @@ We use the predicted values to normalize the raw 1999 and 2012 race results. The
 
 LOESS regression predictions allow us to compute age normalized run times for men and women that entered the 1999 and 2012 Cherry Blossom Ten Mile Run races. We first explore individual gender results for both years considered. We then compare the two genders to determine which performed better.
 
-#### Comparing Mens' Run Times for 1999 and 2012
+#### Comparing Men's Run Times for 1999 and 2012
 
 When naively comparing median results, runners in 1999 underperform (92.65) relative to runners in 2012 (92.42). This comparison does not account for the age distribution of runners in the field. Given our age grading implementation, we compare both years accounting for age. 
 
@@ -394,7 +394,7 @@ ggplot(df) +
 
 Reviewing the density plot in Figure 7, the 1999 field is shown to be centered just above 1.6 times the fastest runner's time for the respective age group.  2012 is centered closer to 1.75 times the fastest runner's time.  2012 also exhibits a wider, flatter curve with a less prominent median normalized run time. Additional evidence for slowness in 2012 can be clearly seen in Figure 8. The QQ plot shows a pull toward 2012, especially for runners in slower quartiles. These two distributions are obviously not the same and indicate when accounting for age, 1999 runners performed better than 2012 runners.
 
-As mentioned in the previous section, the number of runners in the 2012 race has increased significantly. However, we also see a clear shift towards a larger median. This might signal that the growth of the race's field is mostly in the recreational category of runner - a casual athlete, as well as persons seeking to walk the race route.  The second statement seems well supported by the long tail distribution of 2012 runners.  In 1999, the race effectively cut-off at the 2.5 times best runner's time, while in 2012 the race extended beyond three times the best runner's time. We could make inference that the added participation is largely in mid-pack and lower runners, and not in the faster part of the mens' field.
+As mentioned in the previous section, the number of runners in the 2012 race has increased significantly. However, we also see a clear shift towards a larger median. This might signal that the growth of the race's field is mostly in the recreational category of runner - a casual athlete, as well as persons seeking to walk the race route.  The second statement seems well supported by the long tail distribution of 2012 runners.  In 1999, the race effectively cut-off at the 2.5 times best runner's time, while in 2012 the race extended beyond three times the best runner's time. We could make inference that the added participation is largely in mid-pack and lower runners, and not in the faster part of the men's field.
 
 ```{r eval=FALSE}
 # t test show sig difference with 1999 being faster when accounting for age
@@ -405,104 +405,66 @@ t.test(time99NormM, time12NormM)
 In fact, male runners in 1999 were found to have a statisically significant difference from male runners in 2012 in the normalized for age run time.  Runners in 1999 were a mean of 0.12 faster than in 2012 (p<0.0001).  
 
 
-#### Comparing Womens' Run Times for 1999 and 2012
+#### Comparing Women's Run Times for 1999 and 2012
 
-We will also compare womens' run times between 1999 and 2012 using the same LOESS Regression technique to build a model to predict the fastest woman finisher's time for each age between 20 years old and 80 years old.
-
-``` {r women_1999v2012, eval=FALSE}
-# use span of 0.5 instead of .75 to capture curvature better
-RunModelWomen <- loess(fastest ~ age, data=BestTimesW, span=0.5)
-# smooth times out, returns vector of times for each age
-PredictedTimeW <- predict(RunModelWomen, newdata = BestTimesW$age)
-
-# plot fastest times by age - leaving all ages in right now
-# big spike in later ages
-#plot(BestTimesW$fastest ~ BestTimesW$age, type ="l", xlim = c(20, 80))
-# smooth out fastest times
-#lines(x = BestTimesW$age, y = PredictedTimeW, col = "purple", lwd = 2)
-
-BestTimesW %>% ggplot(aes(x=age, y=fastest, group=sex, color=sex)) + geom_line() + theme_light() + ggtitle("Fastest Female Race Time Across 1999-2012") + scale_x_continuous("Age") + scale_y_continuous("Run Time in Minutes") + geom_smooth(method = "loess") + scale_color_manual(values = c("#fc41e9")) + theme(legend.position = "bottom")
-```
-The fastest female runner's time is shown to move in a similar pattern to the Men's top winner, reaching a consistent peak performance after age 25, with a slow drop off in performance through age 40.  Even through age 50, the elite woman's performance is maintained at a similar level to their early 20's.  After 50, performance degradtation accelerates. 
+We also compare women's run times between 1999 and 2012 using the same age grading technique. As previously seen in Figure 6, times for women show sharp curvature. Peak run times occur around age 30 then increase sharply. Of particular note is the amount of run time variation for women in their late 70's. LOESS helps to smooth this variation when using age grading.
 
 
-```{r women, eval=FALSE}
+``` {r women_1999v2012, fig.width=8.5, fig.height=4, include=TRUE}
 
 # normalize all times based on fastest time predictions per instructions
 names(PredictedTimeW) = BestTimesW$age
 timeNormW = AllFinishersW$runTime / PredictedTimeW[as.character(AllFinishersW$age)]
 
-# pull out two times we are interested in for the women
+# pull out two years we are interested in for the men
 time99NormW = timeNormW[AllFinishersW$year == 1999]
 time12NormW = timeNormW[AllFinishersW$year == 2012]
 
-# relatively similar, with slightly faster times in general in 99
-# especially when considering slower age based times, large gap in 3Q
-# more extreme slow times in 2012
-summary(time99NormW)
-summary(time12NormW)
+# 1999 age normalized times faster across all quartiles
+#summary(time99NormW)
+#summary(time12NormW)
 
-# feel free to change these vizzes up
+AllNormTimes<-data.frame(age=names(time99NormW), 
+                         year="1999",
+                         NormRunTime=time99NormW)
 
-#par(mfrow=c(2,1))
-#plot(density(100*time99NormW, na.rm = TRUE), 
-#    # ylim = c(0, 0.05), 
-#     col = "purple",
-#     lwd = 3,  xlab = "Time (percentage)",
-#     main = "Time Distribution for Women
-#            Percentage of the Fastest Runner for a Given Age",
-#     cex.main = 0.8, cex.lab = 0.8, cex.axis = 0.8)
-#
-#lines(density(100*time12NormW, na.rm = TRUE), 
- #         lwd = 3, col = "green")
+AllNormTimes<-rbind(AllNormTimes, 
+                    data.frame(age=names(time12NormW), 
+                               year="2012", 
+                               NormRunTime=time12NormW))
 
-#legend("topleft", fill = c("purple", "green"),
-#       legend = c("1999", "2012"), bty = "n",
-#       cex= 0.8)
+AllNormTimes %>% 
+          ggplot(aes(x=NormRunTime, color=year, group=year)) + 
+          geom_density(size=1) + 
+          theme_light() + 
+          theme(legend.position = "bottom") + 
+          ggtitle("Figure XX: Density of Normalized Run Time - Women, 1999 vs. 2012", 
+                    subtitle = "Run Times Normalized by Fastest Predicted Time (LOESS) for All Race Years")
 
-AllNormTimes<-data.frame(age=names(time99NormW), year="1999", NormRunTime=time99NormW)
-AllNormTimes<-rbind(AllNormTimes, data.frame(age=names(time12NormW), year="2012", NormRunTime=time12NormW))
+# 2012 age controlled times are definitely slower, 
+# runners generally ran slower for their age grps
 
+# check QQ plot for 1999 vs 2012 Men
+df <- as.data.frame(qqplot(time99NormW, time12NormW, plot.it = FALSE))
 
-AllNormTimes %>% ggplot(aes(x=NormRunTime, color=year, group=year)) + geom_density(size=1) + theme_light() + theme(legend.position = "bottom") + ggtitle("Density of Normalized Run Time - Women, 1999 vs. 2012", subtitle = "Run Times Normalized to Fastest Time by Age over All Race Years") + scale_x_continuous("Normalized Run Time")
-
-
-```
-Comparing the results of 1999 and 2012, women's times show a less evident change than the Mens', but still exhibit some flattening of the center.  The median increases from 1.73 to 1.78, and the mean from 1.72 to 1.80.  The interquartile range has expanded from 0.33 to 0.38.  
-
-```{r fig.width = 8.5, fig.height=4, eval=FALSE}
-
-
-qqplot(time99NormW, time12NormW, pch = 19, cex = 0.5, 
-       xlab = "Age Normalized Time - 1999",
-       ylab = "Age Normalized Time - 2012", 
-       main = "QQ Plot: Age Normalized Run Time for Women",
-       cex.main = 0.8, cex.lab = 0.8, cex.axis = 0.8)
-abline(a =0, b = 1, col="red", lwd = 2)
-par(mfrow=c(1,1))
+ggplot(df) + 
+          geom_point(aes(x=x, y=y))+
+          geom_abline(aes(intercept=0, slope=1, col="red"), show.legend = FALSE)+
+          theme_light() + 
+          ggtitle("Figure XX: QQ Plot of Age Graded Times for Women") + 
+          scale_x_continuous("Age Normalized Time - 1999") + 
+          scale_y_continuous("Age Normalized Time - 2012") + 
+          theme(legend.position="bottom", 
+                legend.title=element_blank())
 
 ```
 
-```{r eval=FALSE}
 
-# women's times are quite similar comparing two years, 
-# however can see some pull for 2012 indicating slightly
-# slower age controlled times, esp in 2012, indicated by the longer
-# right tail in the density plot
-# qq plot shows distributions are not normal, pull toward 2012
-# indicating higher times in 2012 based on age
+Comparing the results of 1999 and 2012, women's times reveal a less evident change than we saw for the men. However, 2012 results are very similar to those of the men, with a wider distribution and flatter center of age graded times. The median run time increases from 1.73 to 1.78, and the mean from 1.72 to 1.80.  The interquartile range has also expanded from 0.33 to 0.38.  
 
-# distributions roughly normal
-#hist(time99NormW)
-#hist(time12NormW)
+As seen in the previous section, the increase in female particpants expanded dramatically. The distributions of women's normalized run times for 1999 and 2012 is more similar than the distributions for men.  While additional results have been added to the tail of the distrbution, the overall length of the distribution has not changed in the same manner that the men's times has.  The maximum race length is still about three times the first finisher for each age group.
 
-AllNormTimes %>% ggplot(aes(x=NormRunTime, fill="#fc41e9")) + geom_histogram() + theme_light() + facet_wrap(~year) + scale_x_continuous("Normalized Run Time") + ggtitle("Histogram of Normalized Womens' Run Times, 1999 vs. 2012") + theme(legend.position = "none") + scale_fill_manual(values=c("#fc41e9"))
-
-
-
-```
-
-The increase in the field size for women is dramatic and noticeable.  The distributions of womens' normalized run times is more similar between 1999 and 2012 than the distribution of the men is.  While additional results have been added to the tail of the distrbution, the overall length of the distribution has not changed in the same manner that the mens' times has.  The maximum race length is still about 3 times the first finisher for each age group.
+Inspecting the quantile-quantile plot provides additional clarity. Similar to the men, results for women in 2012 tend to pull upward from the distribution of 1999 results. This indicates 2012 slightly underperformed 1999 for the women participants. Given these distributions are so close, we also formally compare them with a two-sample t-test. 
 
 ```{r eval=FALSE}
 # t test show sig difference with 1999 being faster when accounting for age
@@ -510,10 +472,11 @@ t.test(time99NormW, time12NormW)
 
 
 ```
-A two sample Student's t-test finds a difference between the two years' women's race results, after standardizing for ages.  While there was a similar normalized  median, the difference of normalized mean running times is approximately 0.07 (p<0.0001).  
+
+A two-sample Student's t-test finds a difference between the two years of women's race results after age grading.  While there was a similar normalized median, the difference of normalized mean running times is approximately 0.07 (p<0.0001).  
 
 
-#### Comparing Results Across Genders
+#### Comparing Run Time Results Across Genders
 ``` {r womenvmen_1999v2012, fig.width = 8.5, fig.height=4, eval=FALSE}
 # COMPARE BOTH GENDERS
 
@@ -543,7 +506,7 @@ AllNormTimes %>% ggplot(aes(x=NormRunTime, color=sex, group=sex)) + geom_density
 
 
 ```
-In 1999, we can infer that the performance of the mens' field is more closely aligned to the elite portion of their field than the women's field is to their elite competitors.  The median male performance is 1.6x the time of the first place finisher for their age, while females are above 1.75.  
+In 1999, we can infer that the performance of the men's field is more closely aligned to the elite portion of their field than the women's field is to their elite competitors.  The median male performance is 1.6x the time of the first place finisher for their age, while females are above 1.75.  
 
 
 ```{r eval=FALSE}
@@ -593,7 +556,7 @@ AllNormTimes<-rbind(AllNormTimes, data.frame(age=names(time12NormW), year="2012"
 AllNormTimes %>% ggplot(aes(x=NormRunTime, color=sex, group=sex)) + geom_density(size=1) + theme_light() + theme(legend.position = "bottom") + ggtitle("Density of Normalized Run Time - Men vs. Women, 2012", subtitle = "Run Times Normalized to Fastest Time by Age Within Gender over All Race Years")
 ```
 
-Reviewing the density curves of 2012, the median mens' performance relative to fastest age performance has shifted to be very similar to the womens.  The distribution of the women is still a more narrow interquartile range than the men.   
+Reviewing the density curves of 2012, the median male performance relative to fastest age performance has shifted to be very similar to the womens.  The distribution of the women is still a more narrow interquartile range than the men.   
 
 ```{r eval=FALSE}
 qqplot(time12NormM, time12NormW, pch = 19, cex = 0.5, 
@@ -611,7 +574,7 @@ t.test(time12NormM, time12NormW)
 
 
 ```
-The two sample student's t-test again finds a significant difference between mens' and womens' relative times; however, this time the performance gap has narrowed.  Men still run a faster time relative to their age and gender, with a mean time of 1.77 times fastest time, while Women run a mean time of 1.80 times their age and gender's fastest time.  This is still a statistically signficant difference (p<0.0001).
+The two sample student's t-test again finds a significant difference between men's and women's relative times; however, this time the performance gap has narrowed.  Men still run a faster time relative to their age and gender, with a mean time of 1.77 times fastest time, while Women run a mean time of 1.80 times their age and gender's fastest time.  This is still a statistically signficant difference (p<0.0001).
 
 ```{r eval=FALSE}
 #Do we need this section?  I don't think so?
@@ -635,7 +598,7 @@ AllPredicted %>% ggplot(aes(x=age, y=time, group=sex, color=sex)) +
 ## Future Work and Conclusions
 The comparison of the results of the Cherry Blossom Ten Mile Race between 1999 and 2012 has led to several interesting insights.  
 
-The sport of running, and this event specifically, have seen rapid expansion for a 13 year time period, with a substantially higher interest in the event from women.  Women's interest in running as a sport has led to the creation of all female events like the Disney Princess events.  There has also been an expansion of womens' running product lines from many brands, with a shifting strategy towards brands that cater exclusively to female athletes and runners.
+The sport of running, and this event specifically, have seen rapid expansion for a 13 year time period, with a substantially higher interest in the event from women.  Women's interest in running as a sport has led to the creation of all female events like the Disney Princess events.  There has also been an expansion of women's running product lines from many brands, with a shifting strategy towards brands that cater exclusively to female athletes and runners.
 
 The event has also moved towards higher participation by mid-pack athletes and walkers.  Race organizers should ensure their race is well-organized and still well supported for longer durations.  In consideration of these athletes, there may be a need for greater, or different medical support services throughout the course and at the finish line.  These athletes are also likely the best audience for many race sponsors.
 
@@ -648,7 +611,7 @@ Likewise, Race Organizers could benefit from deeper insight into their event for
 Fitness devices, and smart phone applications for fitness have become a standard for recreational runners.  Predictive pacing could hold a competitive advantage to a device that helps an athlete train smarter.
 
 ## References
-[1] Anderson, Owens, “Running Science”, HumanKinetics.com, http://www.humankinetics.com/excerpts/excerpts/genes-and-running-performance.
+[1] Anderson, Owens. “Running Science”, HumanKinetics.com, http://www.humankinetics.com/excerpts/excerpts/genes-and-running-performance.
 [2] Tucker R., Noakes TD. “The Physiological Regulation of Pacing Strategy During Exercise: A Critical Review.”, British Journal of Sports Medicine, June 2009.
 [3] Joyner, M. J., “Modeling: Optimal Marathon Performance on The Basis Of Physiological Factors.”, Journal of Applied Physiology, Feb 1991.
 [4] Tucker R., “The Anticipatory Regulation of Performance: The Physiological Basis For Pacing Strategies And The Development Of A Perception-Based Model For Exercise Performance.”, British Journal of Sports Medicine, June 2009.
