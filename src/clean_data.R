@@ -146,10 +146,8 @@ womenDF = mapply(createDF, womenResMat, year = 1999:2012,
 
 
 cbMen = do.call(rbind, menDF)
-na.fail(cbMen) # check
 
 cbWomen = do.call(rbind, womenDF)
-na.fail(cbWomen) #check
 
 save(cbMen, file = "Data/cbMen.rda")
 save(cbWomen, file = "Data/cbWomen.rda")
