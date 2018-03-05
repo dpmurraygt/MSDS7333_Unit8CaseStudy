@@ -44,7 +44,7 @@ Participation in competitive running has increased dramtically in the past two d
 
 ## Introduction
 
-The sport of running continues to grow rapidly. While major events like the Boston Marathon have held races for more than 100 years, the modern day sport of running has seen a significant expansion of runner participation since 1995. Overall participation in races around the United States expanded from seven million in 1995 to almost 16 million in 2012 (5). 
+The sport of running continues to grow rapidly. While major events like the Boston Marathon have held races for more than 100 years, the modern-day sport of running has seen a significant expansion of runner participation since 1995. Overall participation in races around the United States expanded from seven million in 1995 to almost 16 million in 2012 (5). 
 
 The Cherry Blossom Ten Mile Run in Washington, D.C. represents a microcosm of the upward participation trend in running. Between the period of 1999 and 2012, participation has tripled. Runners of all ages and skill levels participate in the race each year. 
 
@@ -255,11 +255,13 @@ BestTimeYr %>%
     scale_y_continuous("Best Performance by Age")
 ```
 
-This relationship between age and performance is a natural phenomenon known well by competitive runners. To account for this phenomenon, age grading is used for ranking runners performance based on their age. In fact, age graded performance is more frequently used for runner comparisons. Runnersworld.com describes age grading as "a way of putting all race participants on a level playing field, regardless of age or gender. (3)" In age grading, a runner's time is "graded" or normalized based on the world record time for his or her age. 
+### Age Grading Results
 
-Given overwhelming visual evidence of the positive relationship between age and running performance, we implement an age grading method to compare the 1999 results to the 2012 race results for the Cherry Blossom Ten Mile Run. We use the fastest times recorded for each age considering the time span of 1999 to 2012. Many of these times are fairly close to world record times for 10 mile runs. Additionally, we apply a local regression (LOESS) model to predict the fastest times. LOESS is a non-parametric local regression implementation that uses a subset of data to fit individual regression models. This method allows for complex curve fitting. In our case, it takes some of the noise out of the data we use to normalize run times in order to create age grades.
+The relationship between age and performance is a natural phenomenon known well by competitive runners. To account for this phenomenon, age grading is used for ranking runners performance based on their age. In fact, age graded performance is more frequently used for runner comparisons. Runnersworld.com describes age grading as "a way of putting all race participants on a level playing field, regardless of age or gender. (3)" In age grading, a runner's time is normalized based on the world record time for his or her age. To normalize run times, analysis typically involves dividing raw run times by the world record for a given age. As an example, a runner who is 33 with a finish time of 75 minutes would have a standardized time of (75/57) 1.32 given a record time of 57 minutes for his age category. We use the terms age grading and normalization interchangeably for the remainder of this paper.
 
-We use the raw fastest times and ages to fit the LOESS model. By predicting the fastest times for the ages we are interested in, we are able to smooth the data. Using predicted times helps control for outliers and minimize year to year fluctuations in our dataset. We use these predicted fastest times to age grade each run time in 1999 and 2012, the two years we are interested in comparing. 
+Given overwhelming visual evidence of the positive relationship between age and running performance, we implement an age grading method to compare the 1999 results to the 2012 race results for the Cherry Blossom Ten Mile Run. Top runners in the Cherry Blossom races have run very close to world records. Therefore, we use the fastest times for each age in the dataset containing race results from 1999 to 2012. Typically, we would simply use these fastest run times for each age to normalize raw run times. However, year to year fluctuations of fastest times given age call for a different approach. 
+
+To account for run time fluctuations, we gather the fastest times for each age predicted by a LOESS model. LOESS is a non-parametric local regression method that uses subsets of data to fit individual regression models across an explanatory variable range. This method allows for complex curve fitting. In our case, it takes some of the noise out of the run times we use for age grading. We fit the LOESS model to the dataset containing the fastest run times and age, using run time as the response. We susbequently predict fastest run times for each age given our fitted model. These predictions then represent smoothed fastest times. We use these values to normalize the raw 1999 and 2012 race results. The predictions for fastest times given age is represented by the black line for both genders in Figure 6. LOESS has effectively smoothed the fastest run times used for age grading.
 
 ``` {r LOESS_analysis_setup, include = FALSE}
 
@@ -315,33 +317,33 @@ cbind.data.frame(BestTimes, predTimes) %>%
         legend.title=element_blank())
 ```
 
-To compute age graded run times, we normalize raw run times in 1999 and 2012 by dividing by the fastest predicted time for all valid ages. Only times for ages greater than 11 and less than 81 are used. The Cherry Blossom Race requires all ten mile runners to be at least 12 years old and data for individuals older than 80 is extremely sparse. For example, a runner who is 33 with a finish time of 75 minutes would have a standardized time of (75/57) 1.32 given a predicted fastest time of 57 minutes for his age category.
+The Cherry Blossom Race requires all ten mile runners to be at least 12 years old and data for individuals older than 80 is extremely sparse. Therefore, only run times for ages greater than 11 and less than 81 are considered. To control for gender-based performance differences, we separate age grading for men and women. We explore the results of implementing age grading using LOESS in the next section.
 
 ## Results of Age Grading Analysis
 
-#### Modeling Mens' Finishing Times By Age
+LOESS regression predictions allow us to compute age normalized run times for men and women that entered the 1999 and 2012 Cherry Blossom Ten Mile Run races. We first explore individual gender results for both years considered. We then compare the two genders to determine which performed better.
 
-Employing the LOESS regression method discussed in the methods section, we will create a model to predict the time of the first finishing male for each age between 20 years old and 80 years old.  The exclusion of younger and older ages is reflective of the lower participation rates, and higher level of variability in these ages finishing times.    
+#### Comparing Mens' Run Times for 1999 and 2012
 
-The LOESS regression results in a curve similar to what was shown in our previous data exploration. predicting the best run time in a runner's late 20's, with a degrading performance annually through the rest of the runner's career.  The degradation of performance becomes more severe after age 68.  This model would also suggest that the best runners at age 15 and age 60 are equal in performance in the ten mile distance of the Cherry Blossom course. However, this is likely to be an anomaly given much fewer runners in the 15 and under age group.
+When naively comparing median results, runners in 1999 underperform (92.65) relative to runners in 2012 (92.42). This comparison does not account for the age distribution of runners in the field. Given our age grading implementation, we compare both years accounting for age. 
 
-```{r normalize_men, fig.width=8.5, fig.height=4, eval=FALSE}
+```{r normalize_plot_men, fig.width=8.5, fig.height=4}
 
 
 # plot fastest times by age - leaving all ages in right now
 
-BestTimesM %>% 
-  ggplot(aes(x=age, y=fastest)) + 
-  geom_line(aes(col="Raw Results"), show.legend=TRUE) + 
-  geom_line(aes(x=age, y=PredictedTimeM, col="LOESS Predicted Results"), show.legend = TRUE)+
-  theme_light() + 
-  ggtitle("Figure 7: Fastest Race Times for Men with Smoothing") + 
-  scale_x_continuous("Age") + 
-  scale_y_continuous("Run Time in Minutes") + 
-  #geom_smooth(method = "loess") + this is fitting @ .75
-  scale_color_manual(values = c("red", "#4286f4")) + 
-  theme(legend.position="bottom", 
-        legend.title=element_blank())
+#BestTimesM %>% 
+#  ggplot(aes(x=age, y=fastest)) + 
+#  geom_line(aes(col="Raw Results"), show.legend=TRUE) + 
+#  geom_line(aes(x=age, y=PredictedTimeM, col="LOESS Predicted Results"), show.legend = TRUE)+
+#  theme_light() + 
+#  ggtitle("Figure 7: Fastest Race Times for Men with Smoothing") + 
+#  scale_x_continuous("Age") + 
+#  scale_y_continuous("Run Time in Minutes") + 
+#  #geom_smooth(method = "loess") + this is fitting @ .75
+#  scale_color_manual(values = c("red", "#4286f4")) + 
+#  theme(legend.position="bottom", 
+#        legend.title=element_blank())
 
 
 # normalize all times based on fastest time predictions per instructions
@@ -353,8 +355,8 @@ time99NormM = timeNormM[AllFinishersM$year == 1999]
 time12NormM = timeNormM[AllFinishersM$year == 2012]
 
 # 1999 age normalized times faster across all quartiles
-summary(time99NormM)
-summary(time12NormM)
+#summary(time99NormM)
+#summary(time12NormM)
 
 AllNormTimes<-data.frame(age=names(time99NormM), 
                          year="1999",
@@ -365,37 +367,33 @@ AllNormTimes<-rbind(AllNormTimes,
                                year="2012", 
                                NormRunTime=time12NormM))
 
-
 AllNormTimes %>% 
-  ggplot(aes(x=NormRunTime, color=year, group=year)) + 
-  geom_density(size=1) + 
-  theme_light() + 
-  theme(legend.position = "bottom") + 
-  ggtitle("Figure 7: Density of Normalized Run Time - Men, 1999 vs. 2012", 
-          subtitle = "Run Times Normalized by Fastest Predicted Time (LOESS) for All Race Years")
-
-```
-Reviewing the density plot, the 1999 field is shown to be centered just above 1.6 times the fastest runner's time for the respective age group.  2012 is centered closer to 1.75 times the fastest runner's time.  2012 also exhibits a wider, flatter curve with a less prominent median normalized run time.
-
-```{r fig.width=8.5, fig.height=4, eval=FALSE}
-
-
-
+          ggplot(aes(x=NormRunTime, color=year, group=year)) + 
+          geom_density(size=1) + 
+          theme_light() + 
+          theme(legend.position = "bottom") + 
+          ggtitle("Figure 7: Density of Normalized Run Time - Men, 1999 vs. 2012", 
+                    subtitle = "Run Times Normalized by Fastest Predicted Time (LOESS) for All Race Years")
 
 # 2012 age controlled times are definitely slower, 
 # runners generally ran slower for their age grps
 
 # check QQ plot for 1999 vs 2012 Men
-qqplot(time99NormM, time12NormM, pch = 19, cex = 0.5, 
-       xlab = "Age Normalized Time - 1999",
-       ylab = "Age Normalized Time - 2012", 
-       main = "QQ Plot: Run Time Normalized Performance for Men",
-       cex.main = 0.8, cex.lab = 0.8, cex.axis = 0.8)
-abline(a =0, b = 1, col="red", lwd = 2)
-par(mfrow=c(1,1))
+df <- as.data.frame(qqplot(time99NormM, time12NormM, plot.it = FALSE))
 
+ggplot(df) + 
+          geom_point(aes(x=x, y=y))+
+          geom_abline(aes(intercept=0, slope=1, col="red"), show.legend = FALSE)+
+          theme_light() + 
+          ggtitle("Figure 8: QQ Plot of Age Graded Times for Men") + 
+          scale_x_continuous("Age Normalized Time - 1999") + 
+          scale_y_continuous("Age Normalized Time - 2012") + 
+          theme(legend.position="bottom", 
+                legend.title=element_blank())
 ```
-?Yeah not really sure what to say about QQ?
+
+Reviewing the density plotin Figure 7, the 1999 field is shown to be centered just above 1.6 times the fastest runner's time for the respective age group.  2012 is centered closer to 1.75 times the fastest runner's time.  2012 also exhibits a wider, flatter curve with a less prominent median normalized run time. Additional evidence for slowness in 2012 can be clearly seen in Figure 8. The QQ plot shows a pull toward 2012, especially for runners in slower quartiles. These two distributions are obviously not the same and indicate when accounting for age, 1999 runners performed better than 2012 runners.
+
 
 ```{r eval=FALSE}
 
@@ -413,16 +411,18 @@ AllNormTimes %>% ggplot(aes(x=NormRunTime , fill="#4286f4")) + geom_histogram() 
 ```
 
 Again, as mentioned in the exploration, the number of runners in the 2012 race overall has increased significantly, but we also see a clear shift towards a larger median - moving from about 1.5 times the best run time for the runner's respective age, to 1.75 times the best run time for the runner's age.  This might signal that the growth of the race's field is mostly in the recreational category of runner - a casual athlete, as well as persons seeking to walk the race route.  The second statement seems well supported by the long tail distribution of 2012 runners.  In 1999, the race effectively cut-off at the 2.5 times best runner's time, while in 2012 the race extended beyond three times the best runner's time. We could make inference that the added participation is largely in mid-pack and lower runners, and not in the faster part of the mens' field.
+
 ```{r eval=FALSE}
 # t test show sig difference with 1999 being faster when accounting for age
 t.test(time99NormM, time12NormM)
 
 ```
+
 In fact, male runners in 1999 were found to have a statisically significant difference from male runners in 2012 in the normalized for age run time.  Runners in 1999 were a mean of 0.12 faster than in 2012 (p<0.0001).  
 
 
 #### Modeling Womens' Finishing Times by Age
-We will also model, and compare Womens' finishing times between 1999 and 2012 using the same Loess Regression technique to build a model to predict the fastest woman finisher's time for each age between 20 years old and 80 years old.
+We will also model, and compare womens' run times between 1999 and 2012 using the same LOESS Regression technique to build a model to predict the fastest woman finisher's time for each age between 20 years old and 80 years old.
 
 ``` {r women_1999v2012, eval=FALSE}
 # use span of 0.5 instead of .75 to capture curvature better
