@@ -5,8 +5,6 @@ date: "March 6th, 2018"
 output:
   word_document:
     fig_caption: yes
-  html_document:
-    df_print: paged
 section: MSDS 7333-403 - Quantifying the World - Case Study 4 (Unit 8)
 ---
 
@@ -176,7 +174,7 @@ AllFinishers %>%
 
 The age of male runners has declined since 1999, with an average age of 40.3 in 1999, declining to a minimum of 37.8 in 2008. The standard deviation of male ages has consistently hovered between 10 and 12 years.
 
-Women participating in the race, however, have been consistently averaged between 33 and 36 years old, without any consistent trend year over year. Standard deviation of age for women is about nine years.
+Women participating in the race, however, have consistently averaged between 33 and 36 years old, without any consistent trend year over year. Standard deviation of age for women is about nine years.
 
 ```{r eda_age_trends, include=TRUE, echo=FALSE, fig.width=8.5, fig.height=4}
 # Have participants ages changed signficantly?
