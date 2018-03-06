@@ -191,7 +191,7 @@ AllFinishers %>%
   facet_wrap(~sex, ncol=1)
 ```
 
-The finish time for the best male participant for this ten mile event has improved consistently from 2008 to 2012, with times approaching 45 minutes. Women's times have been more static, with the exception of a 4 year run of times from 2004 to 2007. Based on the correlation between age and performance, the improvement in men's times could be affected by the overall decrease in average age.
+The finish time for the best male participant for this ten mile event has improved consistently from 2008 to 2012, with times approaching 45 minutes. Based on the correlation between age and performance, the improvement in men's times could be a result of the decrease in the average age for men. Women's times have been more static, with the exception of a 4 year run of times from 2004 to 2007. 
 
 ```{r eda_gender_place, include = TRUE, echo = FALSE, fig.width = 8.5, fig.height = 4}
 # needs GenderPlace
@@ -208,7 +208,7 @@ AllFinishers %>%
       ggtitle("Figure 3: Fastest Time By Race Year and Gender")
 ```
 
-Examination of the race finish times by the age groups of the race, and by gender, show several general consistencies.  The first is the consistency in most age groups from year to year of the race.  Most age groups can be described as a "random walk" around a median race time, with the exception of the 20-24 year segment for men showing a consistent reduction of race finishing times year over year.  The Under 19 segment shows a high degree of variation in the winning runner's time. Some degree of variability might be explained by the number of participants in the segment- consistently less than 100 in each gender- as well as progression of these runners into the more elite 20-24 age group.  The two age divisions for ages 65 and over are omitted from the visualization.
+Examination of race finish times by age groups and gender show several general consistencies. The first is the consistency in most age groups from year to year of the race. Most age groups can be described as a "random walk" around a median race time, with the exception of the 20-24 year segment for men showing a consistent reduction of race finishing times year over year. The Under 19 segment shows a high degree of variation in the winning runner's time. Some degree of this variability might be explained by the number of participants in the segment- consistently less than 100 in each gender- as well as progression of these runners into the more elite 20-24 age group. The two age divisions for ages 65 and over are omitted from the visualization.
 
 ```{r eda_age_groups, include = TRUE, echo = FALSE, fig.width = 8.5, fig.height = 4}
 # needs AgeGroupPlace
@@ -229,7 +229,7 @@ AllFinishers %>%
 
 There may also be some inference made about sudden changes in the winning times for age groups.  The increase of the winning time in the 30-34 age group in the 2011 and 2012 races could signal a key competitor has aged out of the group. Indeed, we see the 35-39 age group for men taking a sudden drop in winning time in 2011 and 2012. While the race size overall is large, there could be a few elite competitors that set the pace for most of the age groups.
 
-Examination of Figure 5 allows for another inference regarding the relationship between age and run time. The two visualizations show the fastest running time for every age between 20 and 80 by gender. Excluding the youngest and oldest participants from our research, running times for men peak in the early twenties, with steadily increasing times for the rest of life. Women peak closer to thirty, with times slowing through their thirties and fourties. Both genders' run times display non-linear relationships when considering age, especially as age increases.
+Examination of Figure 5 allows for another inference regarding the relationship between age and run time. The visualizations show the fastest running time for every age between 20 and 80 by gender. Excluding the youngest and oldest participants from our research, running times for men peak in the early twenties, with steadily increasing times for the rest of life. Women peak closer to thirty, with times slowing through their thirties and forties. Both genders' run times display non-linear relationships when considering age, especially as age increases.
 
 ```{r eda_lead_runners, include = TRUE, echo = FALSE, fig.height=4, fig.width=8.5}
 TopFinisher <- AllFinishers %>% 
@@ -255,6 +255,8 @@ BestTimeYr %>%
 ```
 
 #### Controlling for Age via Age Grading
+
+### Controlling for Age in Competitive Race Results
 
 The relationship between age and performance is a natural phenomenon known well by competitive runners. To account for this phenomenon, age grading is used for ranking runners performance based on their age. In fact, age graded performance is more frequently used for runner comparisons. Runnersworld.com describes age grading as "a way of putting all race participants on a level playing field, regardless of age or gender. (3)" In age grading, a runner's time is normalized based on the world record time for his or her age. To normalize run times, analysis typically involves dividing raw run times by the world record for a given age. As an example, a runner who is 33 with a finish time of 75 minutes would have a standardized time of (75/57) 1.32 given a record time of 57 minutes for his age category. We use the terms age grading and normalization interchangeably for the remainder of this paper.
 
