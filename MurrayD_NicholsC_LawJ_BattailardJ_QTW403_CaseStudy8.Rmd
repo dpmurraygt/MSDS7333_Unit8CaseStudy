@@ -115,7 +115,6 @@ kable(AllFinishers[1:5,], caption="Table 2: Formatted Dataset for Analysis", row
 
 ```
 
-## create table for this in word doc
 Year: year of the race
 Sex: sex of the runner
 Name: Name of the runner
